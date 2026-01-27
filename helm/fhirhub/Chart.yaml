@@ -1,0 +1,33 @@
+apiVersion: v2
+name: fhirhub
+description: FhirHub - FHIR Healthcare Platform
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+
+dependencies:
+  - name: postgresql
+    version: "0.1.0"
+    repository: "file://charts/postgresql"
+    alias: hapi-postgresql
+
+  - name: postgresql
+    version: "0.1.0"
+    repository: "file://charts/postgresql"
+    alias: keycloak-postgresql
+
+  - name: hapi-fhir
+    version: "0.1.0"
+    repository: "file://charts/hapi-fhir"
+
+  - name: keycloak
+    version: "0.1.0"
+    repository: "file://charts/keycloak"
+
+  - name: fhirhub-api
+    version: "0.1.0"
+    repository: "file://charts/fhirhub-api"
+
+  - name: fhirhub-frontend
+    version: "0.1.0"
+    repository: "file://charts/fhirhub-frontend"

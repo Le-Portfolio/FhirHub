@@ -1,0 +1,66 @@
+global:
+  domain: dev.fhirhub.example.com
+  storageClass: standard
+
+hapi-postgresql:
+  persistence:
+    size: 5Gi
+
+keycloak-postgresql:
+  persistence:
+    size: 2Gi
+
+hapi-fhir:
+  replicaCount: 1
+  hpa:
+    enabled: false
+  resources:
+    requests:
+      cpu: 100m
+      memory: 512Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
+
+keycloak:
+  ingress:
+    enabled: true
+    hosts:
+      - host: auth.dev.fhirhub.example.com
+        paths:
+          - path: /
+            pathType: Prefix
+
+fhirhub-api:
+  replicaCount: 1
+  env:
+    ASPNETCORE_ENVIRONMENT: Development
+  ingress:
+    enabled: true
+    hosts:
+      - host: dev.fhirhub.example.com
+        paths:
+          - path: /api(/|$)(.*)
+            pathType: ImplementationSpecific
+  hpa:
+    enabled: false
+  pdb:
+    enabled: false
+  serviceMonitor:
+    enabled: true
+
+fhirhub-frontend:
+  replicaCount: 1
+  ingress:
+    enabled: true
+    hosts:
+      - host: dev.fhirhub.example.com
+        paths:
+          - path: /
+            pathType: Prefix
+  hpa:
+    enabled: false
+  pdb:
+    enabled: false
+  serviceMonitor:
+    enabled: true

@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "hapi-fhir.fullname" . }}
+  labels:
+    {{- include "hapi-fhir.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "hapi-fhir.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "hapi-fhir.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: hapi-fhir
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: {{ include "hapi-fhir.fullname" . }}-config
+          env:
+            - name: spring.datasource.url
+              value: "jdbc:postgresql://{{ .Values.database.host }}:{{ .Values.database.port }}/{{ .Values.database.name }}"
+            - name: spring.datasource.username
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "hapi-fhir.fullname" . }}-db-secret
+                  key: database-username
+            - name: spring.datasource.password
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "hapi-fhir.fullname" . }}-db-secret
+                  key: database-password
+            - name: spring.datasource.driverClassName
+              value: org.postgresql.Driver
+            - name: spring.jpa.properties.hibernate.dialect
+              value: ca.uhn.fhir.jpa.model.dialect.HapiFhirPostgresDialect
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.probes.readiness.path }}
+              port: {{ .Values.probes.readiness.port }}
+            initialDelaySeconds: {{ .Values.probes.readiness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.readiness.periodSeconds }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.probes.liveness.path }}
+              port: {{ .Values.probes.liveness.port }}
+            initialDelaySeconds: {{ .Values.probes.liveness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}

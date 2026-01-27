@@ -1,0 +1,35 @@
+FhirHub has been deployed!
+
+Release: {{ .Release.Name }}
+Namespace: {{ .Release.Namespace }}
+
+Components:
+  - HAPI FHIR Server
+  - Keycloak Identity Provider
+  - FhirHub API
+  - FhirHub Frontend
+  - PostgreSQL (x2: HAPI + Keycloak)
+
+{{- if .Values.fhirhub-frontend.ingress.enabled }}
+Frontend URL:
+{{- range .Values.fhirhub-frontend.ingress.hosts }}
+  http{{ if $.Values.fhirhub-frontend.ingress.tls }}s{{ end }}://{{ .host }}
+{{- end }}
+{{- end }}
+
+{{- if (index .Values "fhirhub-api").ingress.enabled }}
+API URL:
+{{- range (index .Values "fhirhub-api").ingress.hosts }}
+  http{{ if (index $.Values "fhirhub-api").ingress.tls }}s{{ end }}://{{ .host }}/api/
+{{- end }}
+{{- end }}
+
+{{- if .Values.keycloak.ingress.enabled }}
+Keycloak URL:
+{{- range .Values.keycloak.ingress.hosts }}
+  http{{ if $.Values.keycloak.ingress.tls }}s{{ end }}://{{ .host }}
+{{- end }}
+{{- end }}
+
+To check the status of the deployment:
+  kubectl get pods -n {{ .Release.Namespace }} -l app.kubernetes.io/part-of=fhirhub

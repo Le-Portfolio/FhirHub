@@ -1,0 +1,211 @@
+{
+  "realm": "fhirhub",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": true,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "editUsernameAllowed": false,
+  "bruteForceProtected": true,
+  "otpPolicyType": "totp",
+  "otpPolicyAlgorithm": "HmacSHA1",
+  "otpPolicyInitialCounter": 0,
+  "otpPolicyDigits": 6,
+  "otpPolicyLookAheadWindow": 1,
+  "otpPolicyPeriod": 30,
+  "roles": {
+    "realm": [
+      {
+        "name": "practitioner",
+        "description": "Healthcare practitioner with access to patient data"
+      },
+      {
+        "name": "admin",
+        "description": "Administrator with full system access"
+      },
+      {
+        "name": "nurse",
+        "description": "Nurse with read/write vitals and read-only clinical data"
+      },
+      {
+        "name": "front_desk",
+        "description": "Front desk staff with read-only patient demographics"
+      },
+      {
+        "name": "patient",
+        "description": "Patient with read-only access to own data"
+      },
+      {
+        "name": "api_client",
+        "description": "Service account for system integrations"
+      }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "fhirhub-frontend",
+      "name": "FhirHub Frontend",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "rootUrl": "http://localhost:7002",
+      "baseUrl": "/",
+      "redirectUris": [
+        "http://localhost:7002/*"
+      ],
+      "webOrigins": [
+        "http://localhost:7002"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      },
+      "protocolMappers": [
+        {
+          "name": "audience-mapper",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "fhirhub-frontend",
+            "id.token.claim": "false",
+            "access.token.claim": "true",
+            "introspection.token.claim": "true"
+          }
+        },
+        {
+          "name": "fhir-patient-id-mapper",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "fhir_patient_id",
+            "claim.name": "fhir_patient_id",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true",
+            "introspection.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "fhirhub-backend",
+      "name": "FhirHub Backend",
+      "enabled": true,
+      "publicClient": false,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "fhirhub-backend-secret",
+      "defaultClientScopes": [
+        "web-origins",
+        "roles"
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "doctor@fhirhub.local",
+      "email": "doctor@fhirhub.local",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Sarah",
+      "lastName": "Chen",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "practitioner",
+        "default-roles-fhirhub"
+      ]
+    },
+    {
+      "username": "admin@fhirhub.local",
+      "email": "admin@fhirhub.local",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Admin",
+      "lastName": "User",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "admin",
+        "practitioner",
+        "default-roles-fhirhub"
+      ]
+    },
+    {
+      "username": "nurse@fhirhub.local",
+      "email": "nurse@fhirhub.local",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Emily",
+      "lastName": "Rodriguez",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "nurse",
+        "default-roles-fhirhub"
+      ]
+    },
+    {
+      "username": "frontdesk@fhirhub.local",
+      "email": "frontdesk@fhirhub.local",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Maria",
+      "lastName": "Santos",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "front_desk",
+        "default-roles-fhirhub"
+      ]
+    },
+    {
+      "username": "patient@fhirhub.local",
+      "email": "patient@fhirhub.local",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "John",
+      "lastName": "Doe",
+      "attributes": {
+        "fhir_patient_id": ["patient-001"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "patient",
+        "default-roles-fhirhub"
+      ]
+    }
+  ]
+}

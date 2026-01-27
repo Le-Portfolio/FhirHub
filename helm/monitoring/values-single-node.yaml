@@ -1,0 +1,267 @@
+# Single-node monitoring stack values
+# Usage: helm install prometheus prometheus-community/kube-prometheus-stack -n monitoring -f values-single-node.yaml
+#
+# Tuned for a single machine with limited resources:
+#   - Prometheus: 15Gi storage (not 50Gi), 7-day retention (not 15)
+#   - Grafana: 2Gi storage (not 10Gi)
+#   - Loki: 10Gi storage (not 20Gi), 72h retention (not 168h)
+#   - Reduced resource limits across the board
+
+grafana:
+  enabled: true
+  adminUser: admin
+  adminPassword: ""
+  admin:
+    existingSecret: grafana-admin-credentials
+    userKey: admin-user
+    passwordKey: admin-password
+  sidecar:
+    dashboards:
+      enabled: true
+      label: grafana_dashboard
+      folder: /tmp/dashboards
+      searchNamespace: ALL
+    datasources:
+      enabled: true
+      label: grafana_datasource
+  dashboardProviders:
+    dashboardproviders.yaml:
+      apiVersion: 1
+      providers:
+        - name: fhirhub
+          orgId: 1
+          folder: FhirHub
+          type: file
+          disableDeletion: false
+          editable: true
+          options:
+            path: /tmp/dashboards
+  persistence:
+    enabled: true
+    size: 2Gi
+    storageClassName: local-path
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+  service:
+    type: ClusterIP
+
+prometheus:
+  prometheusSpec:
+    retention: 7d
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: local-path
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 15Gi
+    resources:
+      requests:
+        cpu: 100m
+        memory: 512Mi
+      limits:
+        cpu: 500m
+        memory: 1Gi
+    serviceMonitorSelector:
+      matchLabels:
+        release: prometheus
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+    additionalScrapeConfigs:
+      - job_name: fhirhub-api
+        metrics_path: /metrics
+        scrape_interval: 30s
+        kubernetes_sd_configs:
+          - role: endpoints
+            namespaces:
+              names:
+                - fhirhub
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_service_label_app]
+            regex: fhirhub-api
+            action: keep
+          - source_labels: [__meta_kubernetes_namespace]
+            target_label: namespace
+          - source_labels: [__meta_kubernetes_service_name]
+            target_label: service
+          - source_labels: [__meta_kubernetes_pod_name]
+            target_label: pod
+
+      - job_name: hapi-fhir
+        metrics_path: /fhir/metrics
+        scrape_interval: 30s
+        kubernetes_sd_configs:
+          - role: endpoints
+            namespaces:
+              names:
+                - fhirhub
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_service_label_app]
+            regex: hapi-fhir
+            action: keep
+          - source_labels: [__meta_kubernetes_namespace]
+            target_label: namespace
+          - source_labels: [__meta_kubernetes_service_name]
+            target_label: service
+          - source_labels: [__meta_kubernetes_pod_name]
+            target_label: pod
+
+      - job_name: keycloak
+        metrics_path: /metrics
+        scrape_interval: 30s
+        kubernetes_sd_configs:
+          - role: endpoints
+            namespaces:
+              names:
+                - fhirhub
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_service_label_app]
+            regex: keycloak
+            action: keep
+          - source_labels: [__meta_kubernetes_namespace]
+            target_label: namespace
+          - source_labels: [__meta_kubernetes_service_name]
+            target_label: service
+          - source_labels: [__meta_kubernetes_pod_name]
+            target_label: pod
+
+      - job_name: postgresql
+        metrics_path: /metrics
+        scrape_interval: 30s
+        kubernetes_sd_configs:
+          - role: endpoints
+            namespaces:
+              names:
+                - fhirhub
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_service_label_app]
+            regex: postgresql
+            action: keep
+          - source_labels: [__meta_kubernetes_namespace]
+            target_label: namespace
+          - source_labels: [__meta_kubernetes_service_name]
+            target_label: service
+          - source_labels: [__meta_kubernetes_pod_name]
+            target_label: pod
+
+alertmanager:
+  enabled: true
+  alertmanagerSpec:
+    storage:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: local-path
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 2Gi
+    resources:
+      requests:
+        cpu: 25m
+        memory: 64Mi
+      limits:
+        cpu: 100m
+        memory: 128Mi
+  config:
+    global:
+      resolve_timeout: 5m
+    route:
+      group_by: ['alertname', 'namespace', 'severity']
+      group_wait: 30s
+      group_interval: 5m
+      repeat_interval: 4h
+      receiver: default
+    receivers:
+      - name: default
+        webhook_configs: []
+
+kubeStateMetrics:
+  enabled: true
+
+nodeExporter:
+  enabled: true
+  resources:
+    requests:
+      cpu: 25m
+      memory: 32Mi
+    limits:
+      cpu: 100m
+      memory: 64Mi
+
+# Loki overrides for single-node
+loki:
+  enabled: true
+  deploymentMode: SingleBinary
+  loki:
+    auth_enabled: false
+    commonConfig:
+      replication_factor: 1
+    storage:
+      type: filesystem
+    schemaConfig:
+      configs:
+        - from: "2024-01-01"
+          store: tsdb
+          object_store: filesystem
+          schema: v13
+          index:
+            prefix: index_
+            period: 24h
+    limits_config:
+      retention_period: 72h
+      enforce_metric_name: false
+      reject_old_samples: true
+      reject_old_samples_max_age: 72h
+      max_entries_limit_per_query: 5000
+      max_query_series: 500
+    compactor:
+      working_directory: /tmp/loki/compactor
+      retention_enabled: true
+      delete_request_store: filesystem
+    storage_config:
+      filesystem:
+        directory: /tmp/loki/chunks
+      tsdb_shipper:
+        active_index_directory: /tmp/loki/tsdb-index
+        cache_location: /tmp/loki/tsdb-cache
+  singleBinary:
+    replicas: 1
+    persistence:
+      enabled: true
+      size: 10Gi
+      storageClassName: local-path
+    resources:
+      requests:
+        cpu: 50m
+        memory: 256Mi
+      limits:
+        cpu: 250m
+        memory: 512Mi
+  gateway:
+    enabled: false
+  monitoring:
+    selfMonitoring:
+      enabled: false
+    lokiCanary:
+      enabled: false
+  test:
+    enabled: false
+
+promtail:
+  enabled: true
+  resources:
+    requests:
+      cpu: 25m
+      memory: 32Mi
+    limits:
+      cpu: 100m
+      memory: 64Mi

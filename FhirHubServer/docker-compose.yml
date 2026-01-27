@@ -1,0 +1,120 @@
+services:
+  # PostgreSQL Database for HAPI FHIR
+  postgres:
+    image: postgres:18-alpine
+    container_name: fhirhub-postgres
+    environment:
+      POSTGRES_DB: hapi
+      POSTGRES_USER: hapi
+      POSTGRES_PASSWORD: hapi
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hapi -d hapi"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # HAPI FHIR Server
+  hapi-fhir:
+    image: hapiproject/hapi:latest
+    container_name: fhirhub-hapi
+    ports:
+      - "8080:8080"
+    environment:
+      # Database configuration
+      - spring.datasource.url=jdbc:postgresql://postgres:5432/hapi
+      - spring.datasource.username=hapi
+      - spring.datasource.password=hapi
+      - spring.datasource.driverClassName=org.postgresql.Driver
+      - spring.jpa.properties.hibernate.dialect=ca.uhn.fhir.jpa.model.dialect.HapiFhirPostgresDialect
+      # HAPI FHIR settings
+      - hapi.fhir.default_encoding=json
+      - hapi.fhir.enable_repository_validating_interceptor=false
+      - hapi.fhir.fhir_version=R4
+      - hapi.fhir.allow_external_references=true
+      - hapi.fhir.cors.allow_credentials=true
+      - hapi.fhir.cors.allowed_origin=*
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/fhir/metadata"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  # PostgreSQL Database for Keycloak (separate from HAPI)
+  keycloak-postgres:
+    image: postgres:18-alpine
+    container_name: fhirhub-keycloak-postgres
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: keycloak
+    volumes:
+      - keycloak-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U keycloak -d keycloak"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Keycloak Identity Provider
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    container_name: fhirhub-keycloak
+    command: start-dev --import-realm
+    ports:
+      - "8180:8080"
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://keycloak-postgres:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: keycloak
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+    volumes:
+      - ./keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json:ro
+    depends_on:
+      keycloak-postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/localhost/8080 && echo -e 'GET /health/ready HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3 && cat <&3 | grep -q '200'"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # FhirHub API
+  fhirhub-api:
+    build:
+      context: .
+      dockerfile: src/FhirHubServer.Api/Dockerfile
+    container_name: fhirhub-api
+    ports:
+      - "5197:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:8080
+      - HapiFhir__BaseUrl=http://hapi-fhir:8080/fhir
+      - Keycloak__AdminApiBaseUrl=http://keycloak:8080
+      - Keycloak__BackendClientId=fhirhub-backend
+      - Keycloak__BackendClientSecret=fhirhub-backend-secret
+    depends_on:
+      hapi-fhir:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/dashboard/metrics"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  postgres-data:
+  keycloak-postgres-data:
+
+networks:
+  default:
+    name: fhirhub-network

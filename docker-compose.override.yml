@@ -1,0 +1,16 @@
+services:
+  keycloak:
+    command: start-dev --import-realm
+    volumes:
+      - ./FhirHubServer/keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json:ro
+
+  fhirhub-api:
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+
+  fhirhub-frontend:
+    volumes:
+      - ./frontend/src:/app/src:ro
+      - ./frontend/public:/app/public:ro
+    environment:
+      NODE_ENV: development

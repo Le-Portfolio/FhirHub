@@ -1,0 +1,77 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  test-api:
+    name: Test API
+    uses: ./.github/workflows/reusable-dotnet.yml
+    with:
+      solution-path: FhirHubServer
+
+  test-frontend:
+    name: Test Frontend
+    uses: ./.github/workflows/reusable-node.yml
+    with:
+      working-directory: frontend
+
+  build-push-api:
+    name: Build & Push API Image
+    needs: test-api
+    uses: ./.github/workflows/reusable-docker-build.yml
+    with:
+      context: ./FhirHubServer
+      dockerfile: ./FhirHubServer/src/FhirHubServer.Api/Dockerfile
+      image-name: fhirhub-api
+      push: true
+    secrets:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+
+  build-push-frontend:
+    name: Build & Push Frontend Image
+    needs: test-frontend
+    uses: ./.github/workflows/reusable-docker-build.yml
+    with:
+      context: ./frontend
+      dockerfile: ./frontend/Dockerfile
+      image-name: fhirhub-frontend
+      push: true
+    secrets:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+
+  update-manifests:
+    name: Update Helm Manifests
+    runs-on: ubuntu-latest
+    needs: [build-push-api, build-push-frontend]
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup yq
+        uses: mikefarah/yq@master
+
+      - name: Update image tags
+        run: |
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          yq -i ".fhirhub-api.image.tag = \"sha-${SHORT_SHA}\"" helm/fhirhub/values.yaml
+          yq -i ".fhirhub-frontend.image.tag = \"sha-${SHORT_SHA}\"" helm/fhirhub/values.yaml
+
+      - name: Commit updated manifests
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add helm/fhirhub/values.yaml
+          git diff --staged --quiet || git commit -m "chore: update image tags to sha-$(echo ${{ github.sha }} | cut -c1-7)"
+          git push

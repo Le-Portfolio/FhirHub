@@ -1,0 +1,198 @@
+# kube-prometheus-stack Helm values for FhirHub
+# Install: helm install prometheus prometheus-community/kube-prometheus-stack -n monitoring -f values-prometheus-stack.yaml
+
+grafana:
+  enabled: true
+  adminUser: admin
+  adminPassword: ""
+  admin:
+    existingSecret: grafana-admin-credentials
+    userKey: admin-user
+    passwordKey: admin-password
+  sidecar:
+    dashboards:
+      enabled: true
+      label: grafana_dashboard
+      folder: /tmp/dashboards
+      searchNamespace: ALL
+    datasources:
+      enabled: true
+      label: grafana_datasource
+  dashboardProviders:
+    dashboardproviders.yaml:
+      apiVersion: 1
+      providers:
+        - name: fhirhub
+          orgId: 1
+          folder: FhirHub
+          type: file
+          disableDeletion: false
+          editable: true
+          options:
+            path: /tmp/dashboards
+  persistence:
+    enabled: true
+    size: 10Gi
+  service:
+    type: ClusterIP
+
+prometheus:
+  prometheusSpec:
+    retention: 15d
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 50Gi
+    serviceMonitorSelector:
+      matchLabels:
+        release: prometheus
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+    additionalScrapeConfigs:
+      - job_name: fhirhub-api
+        metrics_path: /metrics
+        scrape_interval: 15s
+        kubernetes_sd_configs:
+          - role: endpoints
+            namespaces:
+              names:
+                - fhirhub
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_service_label_app]
+            regex: fhirhub-api
+            action: keep
+          - source_labels: [__meta_kubernetes_namespace]
+            target_label: namespace
+          - source_labels: [__meta_kubernetes_service_name]
+            target_label: service
+          - source_labels: [__meta_kubernetes_pod_name]
+            target_label: pod
+
+      - job_name: hapi-fhir
+        metrics_path: /fhir/metrics
+        scrape_interval: 15s
+        kubernetes_sd_configs:
+          - role: endpoints
+            namespaces:
+              names:
+                - fhirhub
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_service_label_app]
+            regex: hapi-fhir
+            action: keep
+          - source_labels: [__meta_kubernetes_namespace]
+            target_label: namespace
+          - source_labels: [__meta_kubernetes_service_name]
+            target_label: service
+          - source_labels: [__meta_kubernetes_pod_name]
+            target_label: pod
+
+      - job_name: keycloak
+        metrics_path: /metrics
+        scrape_interval: 15s
+        kubernetes_sd_configs:
+          - role: endpoints
+            namespaces:
+              names:
+                - fhirhub
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_service_label_app]
+            regex: keycloak
+            action: keep
+          - source_labels: [__meta_kubernetes_namespace]
+            target_label: namespace
+          - source_labels: [__meta_kubernetes_service_name]
+            target_label: service
+          - source_labels: [__meta_kubernetes_pod_name]
+            target_label: pod
+
+      - job_name: postgresql
+        metrics_path: /metrics
+        scrape_interval: 15s
+        kubernetes_sd_configs:
+          - role: endpoints
+            namespaces:
+              names:
+                - fhirhub
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_service_label_app]
+            regex: postgresql
+            action: keep
+          - source_labels: [__meta_kubernetes_namespace]
+            target_label: namespace
+          - source_labels: [__meta_kubernetes_service_name]
+            target_label: service
+          - source_labels: [__meta_kubernetes_pod_name]
+            target_label: pod
+
+alertmanager:
+  enabled: true
+  alertmanagerSpec:
+    storage:
+      volumeClaimTemplate:
+        spec:
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 5Gi
+  config:
+    global:
+      resolve_timeout: 5m
+    route:
+      group_by: ['alertname', 'namespace', 'severity']
+      group_wait: 30s
+      group_interval: 5m
+      repeat_interval: 4h
+      receiver: default
+      routes:
+        - receiver: slack-critical
+          match:
+            severity: critical
+          continue: true
+        - receiver: slack-warning
+          match:
+            severity: warning
+          continue: true
+    receivers:
+      - name: default
+        webhook_configs: []
+      - name: slack-critical
+        slack_configs:
+          - api_url: "https://hooks.slack.com/services/REPLACE/WITH/WEBHOOK_URL"
+            channel: "#fhirhub-alerts-critical"
+            send_resolved: true
+            title: '[{{ .Status | toUpper }}] {{ .CommonLabels.alertname }}'
+            text: >-
+              *Alert:* {{ .CommonLabels.alertname }}
+              *Severity:* {{ .CommonLabels.severity }}
+              *Namespace:* {{ .CommonLabels.namespace }}
+              *Description:* {{ .CommonAnnotations.description }}
+      - name: slack-warning
+        slack_configs:
+          - api_url: "https://hooks.slack.com/services/REPLACE/WITH/WEBHOOK_URL"
+            channel: "#fhirhub-alerts-warning"
+            send_resolved: true
+            title: '[{{ .Status | toUpper }}] {{ .CommonLabels.alertname }}'
+            text: >-
+              *Alert:* {{ .CommonLabels.alertname }}
+              *Severity:* {{ .CommonLabels.severity }}
+              *Namespace:* {{ .CommonLabels.namespace }}
+              *Description:* {{ .CommonAnnotations.description }}
+    inhibit_rules:
+      - source_match:
+          severity: critical
+        target_match:
+          severity: warning
+        equal: ['alertname', 'namespace']
+
+kubeStateMetrics:
+  enabled: true
+
+nodeExporter:
+  enabled: true

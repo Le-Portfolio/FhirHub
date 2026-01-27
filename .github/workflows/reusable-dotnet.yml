@@ -1,0 +1,45 @@
+name: Reusable .NET Build & Test
+
+on:
+  workflow_call:
+    inputs:
+      solution-path:
+        required: false
+        type: string
+        default: "FhirHubServer"
+      dotnet-version:
+        required: false
+        type: string
+        default: "8.0.x"
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ inputs.solution-path }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ inputs.dotnet-version }}
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --configuration Release --no-restore
+
+      - name: Test
+        run: dotnet test --configuration Release --no-build --verbosity normal --collect:"XPlat Code Coverage" --results-directory ./coverage
+
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dotnet-coverage
+          path: ${{ inputs.solution-path }}/coverage/**/coverage.cobertura.xml
+          retention-days: 7

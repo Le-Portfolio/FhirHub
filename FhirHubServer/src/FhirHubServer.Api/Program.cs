@@ -14,6 +14,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
+using Prometheus;
 using Serilog;
 
 // Configure Serilog early for startup logging
@@ -89,9 +90,28 @@ try
         options.Audience = keycloakSettings["Audience"];
         options.RequireHttpsMetadata = keycloakSettings.GetValue<bool>("RequireHttpsMetadata", true);
 
+        // Build set of accepted issuers - both internal Docker URL and public HTTPS URL
+        var acceptedIssuers = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var authority = keycloakSettings["Authority"];
+        if (!string.IsNullOrEmpty(authority))
+            acceptedIssuers.Add(authority);
+        var publicIssuer = keycloakSettings["PublicIssuer"];
+        if (!string.IsNullOrEmpty(publicIssuer))
+            acceptedIssuers.Add(publicIssuer);
+
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
+            IssuerValidator = (issuer, token, parameters) =>
+            {
+                if (acceptedIssuers.Contains(issuer))
+                    return issuer;
+                // Also accept the issuer from OIDC discovery metadata
+                if (parameters.ValidIssuers?.Contains(issuer) == true)
+                    return issuer;
+                throw new SecurityTokenInvalidIssuerException(
+                    $"IDX10205: Issuer '{issuer}' not in accepted issuers: [{string.Join(", ", acceptedIssuers)}]");
+            },
             ValidateAudience = true,
             ValidateLifetime = true,
             NameClaimType = "preferred_username",

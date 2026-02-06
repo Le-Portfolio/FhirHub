@@ -9,6 +9,8 @@ import { HeartPulse } from "@/components/ui/icons";
 export default function Home() {
   const router = useRouter();
   const [ready, setReady] = useState(false);
+  const [guestLoading, setGuestLoading] = useState(false);
+  const [guestError, setGuestError] = useState<string | null>(null);
 
   useEffect(() => {
     initKeycloak({
@@ -27,6 +29,47 @@ export default function Home() {
         setReady(true);
       });
   }, [router]);
+
+  const handleGuestLogin = async () => {
+    setGuestLoading(true);
+    setGuestError(null);
+
+    const keycloakUrl =
+      process.env.NEXT_PUBLIC_KEYCLOAK_URL || "http://localhost:8180";
+    const realm = process.env.NEXT_PUBLIC_KEYCLOAK_REALM || "fhirhub";
+    const clientId =
+      process.env.NEXT_PUBLIC_KEYCLOAK_CLIENT_ID || "fhirhub-frontend";
+
+    try {
+      const res = await fetch(
+        `${keycloakUrl}/realms/${realm}/protocol/openid-connect/token`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams({
+            grant_type: "password",
+            client_id: clientId,
+            username: "guest",
+            password: "guest",
+          }),
+        }
+      );
+
+      if (!res.ok) {
+        setGuestError("Guest login unavailable");
+        setGuestLoading(false);
+        return;
+      }
+
+      const tokens = await res.json();
+      sessionStorage.setItem("direct-login-tokens", JSON.stringify(tokens));
+      // Full page navigation so keycloak module resets and picks up the stored tokens
+      window.location.href = "/dashboard";
+    } catch {
+      setGuestError("Guest login unavailable");
+      setGuestLoading(false);
+    }
+  };
 
   if (!ready) {
     return (
@@ -54,6 +97,21 @@ export default function Home() {
             <Link href="/register" className="btn btn-ghost w-full">
               Create Account
             </Link>
+            <div className="divider text-xs text-base-content/40 my-0">or</div>
+            <button
+              onClick={handleGuestLogin}
+              disabled={guestLoading}
+              className="btn btn-outline btn-secondary w-full"
+            >
+              {guestLoading ? (
+                <span className="loading loading-spinner loading-sm" />
+              ) : (
+                "Continue as Guest"
+              )}
+            </button>
+            {guestError && (
+              <p className="text-xs text-error">{guestError}</p>
+            )}
           </div>
         </div>
       </div>

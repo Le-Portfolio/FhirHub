@@ -10,7 +10,7 @@ services:
     volumes:
       - postgres-data:/var/lib/postgresql/data
     networks:
-      - fhirhub-network
+      - fhirhub-internal
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${HAPI_DB_USER:-hapi} -d ${HAPI_DB_NAME:-hapi}"]
       interval: 10s
@@ -24,6 +24,7 @@ services:
     ports:
       - "${HAPI_PORT:-8080}:8080"
     environment:
+      JAVA_OPTS: "-Xms512m -Xmx1024m"
       spring.datasource.url: jdbc:postgresql://postgres:5432/${HAPI_DB_NAME:-hapi}
       spring.datasource.username: ${HAPI_DB_USER:-hapi}
       spring.datasource.password: ${HAPI_DB_PASSWORD:-hapi}
@@ -39,13 +40,17 @@ services:
       postgres:
         condition: service_healthy
     networks:
-      - fhirhub-network
+      - fhirhub-internal
+    deploy:
+      resources:
+        limits:
+          memory: 1280M
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/fhir/metadata"]
+      test: ["CMD", "java", "-version"]
       interval: 30s
       timeout: 10s
       retries: 5
-      start_period: 60s
+      start_period: 90s
 
   # PostgreSQL Database for Keycloak
   keycloak-postgres:
@@ -58,7 +63,7 @@ services:
     volumes:
       - keycloak-postgres-data:/var/lib/postgresql/data
     networks:
-      - fhirhub-network
+      - fhirhub-internal
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${KC_DB_USER:-keycloak} -d ${KC_DB_NAME:-keycloak}"]
       interval: 10s
@@ -69,8 +74,11 @@ services:
   keycloak:
     image: quay.io/keycloak/keycloak:${KEYCLOAK_VERSION:-26.0}
     container_name: ${COMPOSE_PROJECT_NAME:-fhirhub}-keycloak
+    command: start-dev --import-realm
     ports:
       - "${KEYCLOAK_PORT:-8180}:8080"
+    volumes:
+      - ./keycloak/fhirhub-realm.json:/opt/keycloak/data/import/fhirhub-realm.json:ro
     environment:
       KC_DB: postgres
       KC_DB_URL: jdbc:postgresql://keycloak-postgres:5432/${KC_DB_NAME:-keycloak}
@@ -78,17 +86,39 @@ services:
       KC_DB_PASSWORD: ${KC_DB_PASSWORD:-keycloak}
       KC_BOOTSTRAP_ADMIN_USERNAME: ${KC_ADMIN_USER:-admin}
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_ADMIN_PASSWORD:-admin}
+      KC_PROXY_HEADERS: xforwarded
+      KC_HOSTNAME: ${FHIRHUB_AUTH_DOMAIN:-auth.fhirhub.davidle.dev}
+      KC_HOSTNAME_URL: https://${FHIRHUB_AUTH_DOMAIN:-auth.fhirhub.davidle.dev}
+      KC_HOSTNAME_STRICT: "true"
+      KC_HTTP_ENABLED: "true"
     depends_on:
       keycloak-postgres:
         condition: service_healthy
     networks:
-      - fhirhub-network
+      fhirhub-internal:
+        aliases:
+          - ${FHIRHUB_AUTH_DOMAIN:-auth.fhirhub.davidle.dev}
+      proxy:
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.fhirhub-keycloak.rule=Host(`${FHIRHUB_AUTH_DOMAIN:-auth.fhirhub.davidle.dev}`)"
+      - "traefik.http.routers.fhirhub-keycloak.entrypoints=websecure"
+      - "traefik.http.routers.fhirhub-keycloak.tls.certresolver=letsencrypt"
+      - "traefik.http.services.fhirhub-keycloak.loadbalancer.server.port=8080"
+      - "traefik.docker.network=proxy"
+      # Homepage labels
+      - "homepage.group=FhirHub"
+      - "homepage.name=Keycloak"
+      - "homepage.icon=keycloak.png"
+      - "homepage.href=https://auth.fhirhub.davidle.dev"
+      - "homepage.description=Identity Provider"
+      - "homepage.server=local"
     healthcheck:
-      test: ["CMD-SHELL", "exec 3<>/dev/tcp/localhost/8080 && echo -e 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && cat <&3 | grep -q '200'"]
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/8080'"]
       interval: 15s
       timeout: 5s
       retries: 10
-      start_period: 30s
+      start_period: 60s
 
   # FhirHub API
   fhirhub-api:
@@ -101,26 +131,38 @@ services:
     environment:
       ASPNETCORE_URLS: http://+:8080
       HapiFhir__BaseUrl: http://hapi-fhir:8080/fhir
-      Keycloak__Authority: http://keycloak:8080/realms/${KC_REALM:-fhirhub}
+      Keycloak__Authority: http://${FHIRHUB_AUTH_DOMAIN:-auth.fhirhub.davidle.dev}:8080/realms/${KC_REALM:-fhirhub}
+      Keycloak__PublicIssuer: https://${FHIRHUB_AUTH_DOMAIN:-auth.fhirhub.davidle.dev}/realms/${KC_REALM:-fhirhub}
+      Keycloak__RequireHttpsMetadata: "false"
       Keycloak__Audience: ${KC_CLIENT_ID:-fhirhub-frontend}
-      Keycloak__AdminApiBaseUrl: http://keycloak:8080
+      Keycloak__AdminApiBaseUrl: http://${FHIRHUB_AUTH_DOMAIN:-auth.fhirhub.davidle.dev}:8080
       Keycloak__Realm: ${KC_REALM:-fhirhub}
       Keycloak__BackendClientId: ${KC_BACKEND_CLIENT_ID:-fhirhub-backend}
       Keycloak__BackendClientSecret: ${KC_BACKEND_CLIENT_SECRET:-fhirhub-backend-secret}
       Cors__AllowedOrigins__0: http://localhost:${FRONTEND_PORT:-7002}
+      Cors__AllowedOrigins__1: https://${FHIRHUB_DOMAIN:-fhirhub.davidle.dev}
     depends_on:
       hapi-fhir:
-        condition: service_healthy
+        condition: service_started
       keycloak:
-        condition: service_healthy
+        condition: service_started
     networks:
-      - fhirhub-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/api/dashboard/metrics"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 15s
+      - fhirhub-internal
+      - proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.fhirhub-api.rule=Host(`${FHIRHUB_API_DOMAIN:-api.fhirhub.davidle.dev}`)"
+      - "traefik.http.routers.fhirhub-api.entrypoints=websecure"
+      - "traefik.http.routers.fhirhub-api.tls.certresolver=letsencrypt"
+      - "traefik.http.services.fhirhub-api.loadbalancer.server.port=8080"
+      - "traefik.docker.network=proxy"
+      # Homepage labels
+      - "homepage.group=FhirHub"
+      - "homepage.name=API"
+      - "homepage.icon=mdi-api"
+      - "homepage.href=https://api.fhirhub.davidle.dev"
+      - "homepage.description=FhirHub Backend API"
+      - "homepage.server=local"
 
   # FhirHub Frontend
   fhirhub-frontend:
@@ -137,22 +179,38 @@ services:
       - "${FRONTEND_PORT:-7002}:3000"
     depends_on:
       fhirhub-api:
-        condition: service_healthy
+        condition: service_started
       keycloak:
-        condition: service_healthy
+        condition: service_started
     networks:
-      - fhirhub-network
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
+      - fhirhub-internal
+      - proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.fhirhub-frontend.rule=Host(`${FHIRHUB_DOMAIN:-fhirhub.davidle.dev}`)"
+      - "traefik.http.routers.fhirhub-frontend.entrypoints=websecure"
+      - "traefik.http.routers.fhirhub-frontend.tls.certresolver=letsencrypt"
+      - "traefik.http.services.fhirhub-frontend.loadbalancer.server.port=3000"
+      - "traefik.docker.network=proxy"
+      # Homepage labels
+      - "homepage.group=FhirHub"
+      - "homepage.name=FhirHub"
+      - "homepage.icon=mdi-hospital-box"
+      - "homepage.href=https://fhirhub.davidle.dev"
+      - "homepage.description=FHIR Healthcare Platform"
+      - "homepage.server=local"
 
 volumes:
   postgres-data:
+    name: fhirhub-postgres-data
+    external: true
   keycloak-postgres-data:
+    name: fhirhub-keycloak-postgres-data
+    external: true
 
 networks:
-  fhirhub-network:
-    name: fhirhub-network
+  fhirhub-internal:
+    driver: bridge
+    internal: true
+  proxy:
+    external: true

@@ -19,6 +19,7 @@ import {
   Shield,
   ScrollText,
   UserCog,
+  Sparkles,
   type LucideIcon,
 } from "@/components/ui/icons";
 
@@ -295,8 +296,14 @@ export function Sidebar({ className }: SidebarProps) {
         </div>
       </nav>
 
-      {/* Collapse toggle */}
-      <div className="p-3 border-t border-base-200">
+      {/* Demo Mode badge + Collapse toggle */}
+      <div className="p-3 border-t border-base-200 space-y-2">
+        {!isCollapsed && (user?.email?.includes("guest") || user?.fullName?.toLowerCase().includes("guest")) && (
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-warning/10 text-warning text-xs font-medium">
+            <Sparkles className="w-3.5 h-3.5 shrink-0" />
+            <span>Demo Mode</span>
+          </div>
+        )}
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
           className="flex items-center justify-center w-full p-2 rounded-lg hover:bg-base-200 transition-colors"

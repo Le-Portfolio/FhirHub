@@ -5,6 +5,7 @@ import { PageContainer, PageHeader } from "@/components/layout/app-layout";
 import { RefreshCw, Search } from "@/components/ui/icons";
 import { useUserManagementService } from "@/services";
 import { AuditLogTable } from "@/components/admin/audit-log-table";
+import { getDemoUserEvents, getDemoAdminEvents } from "@/lib/demo-data";
 
 type TabType = "user" | "admin";
 
@@ -12,7 +13,6 @@ export default function AuditPage() {
   const [tab, setTab] = useState<TabType>("user");
   const [events, setEvents] = useState<unknown[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
   const [page, setPage] = useState(1);
   const [typeFilter, setTypeFilter] = useState("");
   const [userIdFilter, setUserIdFilter] = useState("");
@@ -21,7 +21,6 @@ export default function AuditPage() {
 
   const fetchEvents = useCallback(async () => {
     setLoading(true);
-    setError(null);
     try {
       if (tab === "user") {
         const data = await service.getAuditEvents({
@@ -35,8 +34,13 @@ export default function AuditPage() {
         const data = await service.getAdminEvents({ page, pageSize });
         setEvents(data);
       }
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error("Failed to fetch events"));
+    } catch {
+      // Fall back to demo data for portfolio demo
+      if (tab === "user") {
+        setEvents(getDemoUserEvents());
+      } else {
+        setEvents(getDemoAdminEvents());
+      }
     } finally {
       setLoading(false);
     }
@@ -98,15 +102,6 @@ export default function AuditPage() {
             disabled={loading}
           >
             <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
-          </button>
-        </div>
-      )}
-
-      {error && (
-        <div className="alert alert-error mb-4">
-          <span>{error.message}</span>
-          <button onClick={fetchEvents} className="btn btn-sm">
-            Retry
           </button>
         </div>
       )}

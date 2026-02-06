@@ -2,6 +2,8 @@ FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
 WORKDIR /app
 EXPOSE 8080
 
+RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
+
 LABEL org.opencontainers.image.source="https://github.com/your-org/FhirHub"
 LABEL org.opencontainers.image.description="FhirHub API Server"
 LABEL org.opencontainers.image.licenses="MIT"
@@ -30,6 +32,6 @@ USER app
 COPY --from=publish /app/publish .
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
-  CMD curl -f http://localhost:8080/api/dashboard/metrics || exit 1
+  CMD curl -sf http://127.0.0.1:8080/swagger/v1/swagger.json > /dev/null || exit 1
 
 ENTRYPOINT ["dotnet", "FhirHubServer.Api.dll"]

@@ -51,24 +51,37 @@ export function useDashboardMetrics(
     setLoading(true);
     setError(null);
 
-    try {
-      const [metricsResult, alertsResult, activitiesResult] = await Promise.all(
-        [
-          dashboardService.getMetrics(),
-          dashboardService.getAlerts(alertsLimit),
-          dashboardService.getActivities(activitiesLimit),
-        ]
-      );
-      setMetrics(metricsResult);
-      setAlerts(alertsResult);
-      setActivities(activitiesResult);
-    } catch (err) {
+    const [metricsResult, alertsResult, activitiesResult] =
+      await Promise.allSettled([
+        dashboardService.getMetrics(),
+        dashboardService.getAlerts(alertsLimit),
+        dashboardService.getActivities(activitiesLimit),
+      ]);
+
+    setMetrics(
+      metricsResult.status === "fulfilled" ? metricsResult.value : []
+    );
+    setAlerts(
+      alertsResult.status === "fulfilled" ? alertsResult.value : []
+    );
+    setActivities(
+      activitiesResult.status === "fulfilled" ? activitiesResult.value : []
+    );
+
+    // Only set error if ALL requests failed
+    const allFailed = [metricsResult, alertsResult, activitiesResult].every(
+      (r) => r.status === "rejected"
+    );
+    if (allFailed) {
+      const firstErr = (metricsResult as PromiseRejectedResult).reason;
       setError(
-        err instanceof Error ? err : new Error("Failed to fetch dashboard data")
+        firstErr instanceof Error
+          ? firstErr
+          : new Error("Failed to fetch dashboard data")
       );
-    } finally {
-      setLoading(false);
     }
+
+    setLoading(false);
   }, [dashboardService, alertsLimit, activitiesLimit]);
 
   const acknowledgeAlert = useCallback(

@@ -3,3 +3,13 @@ blog
 .playwright*
 .claude/
 docs/
+
+# Environment secrets
+.env
+
+# Symlinks
+dockge
+
+# Synthea generated data
+.synthea/
+synthea-data/

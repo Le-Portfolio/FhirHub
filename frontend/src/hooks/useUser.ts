@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useUserManagementService } from "@/services";
 import type { KeycloakUserDTO } from "@/types/dto/user-management.dto";
+import { getDemoUserById } from "@/lib/demo-data";
 
 export interface UseUserOptions {
   immediate?: boolean;
@@ -41,10 +42,15 @@ export function useUser(
         const result = await service.getUserById(userId);
         setData(result);
         hasFetchedRef.current = true;
-      } catch (err) {
-        setError(
-          err instanceof Error ? err : new Error("Failed to fetch user")
-        );
+      } catch {
+        // Fall back to demo data for portfolio demo
+        const demoUser = getDemoUserById(userId);
+        if (demoUser) {
+          setData(demoUser);
+          hasFetchedRef.current = true;
+        } else {
+          setError(new Error("User not found"));
+        }
       } finally {
         setLoading(false);
         fetchingRef.current = false;

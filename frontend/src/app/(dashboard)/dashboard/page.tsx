@@ -15,7 +15,6 @@ import {
   StatsCardSkeleton,
   ListItemSkeleton,
 } from "@/components/ui/loading-skeleton";
-import { AlertTriangle, RefreshCw } from "@/components/ui/icons";
 
 export default function DashboardPage() {
   const {
@@ -23,48 +22,14 @@ export default function DashboardPage() {
     alerts,
     activities,
     loading: dashboardLoading,
-    error: dashboardError,
-    refetch: refetchDashboard,
   } = useDashboardMetrics();
 
   const {
     patients,
     loading: patientsLoading,
-    error: patientsError,
-    refetch: refetchPatients,
   } = usePatientSummaries({ limit: 5 });
 
   const loading = dashboardLoading || patientsLoading;
-  const error = dashboardError || patientsError;
-
-  const handleRefresh = async () => {
-    await Promise.all([refetchDashboard(), refetchPatients()]);
-  };
-
-  // Error state
-  if (error && !loading) {
-    return (
-      <PageContainer>
-        <PageHeader
-          title="Dashboard"
-          description="Overview of your FHIR data and clinical insights"
-        />
-        <div className="flex flex-col items-center justify-center py-12">
-          <div className="text-error mb-4">
-            <AlertTriangle className="w-12 h-12" />
-          </div>
-          <h3 className="text-lg font-semibold mb-2">
-            Failed to load dashboard
-          </h3>
-          <p className="text-base-content/60 mb-4">{error.message}</p>
-          <button onClick={handleRefresh} className="btn btn-primary gap-2">
-            <RefreshCw className="w-4 h-4" />
-            Try Again
-          </button>
-        </div>
-      </PageContainer>
-    );
-  }
 
   // Loading state
   if (loading && metrics.length === 0) {

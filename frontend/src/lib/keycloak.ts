@@ -26,7 +26,26 @@ export async function initKeycloak(
     return kc.authenticated ?? false;
   }
   _initialized = true;
-  return kc.init({ ...options, pkceMethod: "S256" });
+
+  // Check for tokens from direct login (e.g. guest login via ROPC grant)
+  const directTokens = sessionStorage.getItem("direct-login-tokens");
+  if (directTokens) {
+    sessionStorage.removeItem("direct-login-tokens");
+    const { access_token, refresh_token, id_token } = JSON.parse(directTokens);
+    return kc.init({
+      pkceMethod: "S256",
+      checkLoginIframe: false,
+      token: access_token,
+      refreshToken: refresh_token,
+      idToken: id_token,
+    });
+  }
+
+  return kc.init({
+    ...options,
+    pkceMethod: "S256",
+    checkLoginIframe: false,
+  });
 }
 
 export function isKeycloakInitialized(): boolean {

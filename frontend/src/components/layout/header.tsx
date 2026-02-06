@@ -21,6 +21,9 @@ interface BreadcrumbItem {
   href?: string;
 }
 
+// Path segments that are layout-only routes (no actual page exists)
+const layoutOnlySegments = new Set(["admin"]);
+
 function useBreadcrumbs(): BreadcrumbItem[] {
   const pathname = usePathname();
   const segments = pathname.split("/").filter(Boolean);
@@ -37,9 +40,12 @@ function useBreadcrumbs(): BreadcrumbItem[] {
     // Check if this is a dynamic segment (like an ID)
     const isId = /^[a-f0-9-]{8,}$/i.test(segment) || !isNaN(Number(segment));
 
+    const isLastSegment = index === segments.length - 1;
+    const isLayoutOnly = layoutOnlySegments.has(segment);
+
     breadcrumbs.push({
       label: isId ? "Details" : label,
-      href: index < segments.length - 1 ? href : undefined,
+      href: !isLastSegment && !isLayoutOnly ? href : undefined,
     });
   });
 
@@ -58,7 +64,6 @@ export function Header({
   className,
 }: HeaderProps) {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const breadcrumbs = useBreadcrumbs();
   const { user, logout } = useAuth();
 
@@ -182,15 +187,14 @@ export function Header({
         </div>
 
         {/* User menu */}
-        <div className="dropdown dropdown-end">
-          <button
-            onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-            className="btn btn-ghost btn-sm gap-2 px-2"
+        <details className="dropdown dropdown-end">
+          <summary
+            className="btn btn-ghost btn-sm gap-2 px-2 list-none [&::-webkit-details-marker]:hidden"
             aria-label="User menu"
           >
             <Avatar name={displayName} size="xs" />
             <span className="hidden md:inline font-medium">{displayName}</span>
-          </button>
+          </summary>
           <ul className="dropdown-content z-50 mt-2 menu p-2 bg-base-100 rounded-box w-52 shadow-lg border border-base-200">
             <li>
               <Link href="/profile">
@@ -212,7 +216,7 @@ export function Header({
               </button>
             </li>
           </ul>
-        </div>
+        </details>
       </div>
     </header>
   );

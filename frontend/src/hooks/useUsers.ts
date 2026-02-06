@@ -7,6 +7,7 @@ import type {
   UserSearchParamsDTO,
   PaginatedUsersResponse,
 } from "@/types/dto/user-management.dto";
+import { getDemoUsers } from "@/lib/demo-data";
 
 export interface UseUsersOptions extends UserSearchParamsDTO {
   immediate?: boolean;
@@ -61,10 +62,9 @@ export function useUsers(options: UseUsersOptions = {}): UseUsersResult {
         const result = await service.getUsers(searchParamsRef.current);
         setData(result);
         lastFetchedParamsRef.current = searchParamsKey;
-      } catch (err) {
-        setError(
-          err instanceof Error ? err : new Error("Failed to fetch users")
-        );
+      } catch {
+        // Fall back to demo data for portfolio demo
+        setData(getDemoUsers(searchParamsRef.current));
       } finally {
         setLoading(false);
         fetchingRef.current = false;

@@ -156,7 +156,7 @@ export class ApiClient {
 
 // Default API base URL from environment
 export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:5197";
 
 // Create a default client instance
 export function createApiClient(

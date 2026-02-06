@@ -43,12 +43,9 @@ export function usePatientSummaries(
     try {
       const result = await patientService.getPatientSummaries(limit);
       setPatients(result);
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err
-          : new Error("Failed to fetch patient summaries")
-      );
+    } catch {
+      // Don't block the dashboard — component handles empty state gracefully
+      setPatients([]);
     } finally {
       setLoading(false);
     }

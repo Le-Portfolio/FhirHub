@@ -1,0 +1,109 @@
+{
+  "realm": "fhirhub",
+  "enabled": true,
+  "registrationAllowed": true,
+  "roles": {
+    "realm": [
+      {
+        "name": "admin",
+        "description": "FhirHub administrator with full access"
+      },
+      {
+        "name": "practitioner",
+        "description": "Healthcare practitioner (doctor, physician)"
+      },
+      {
+        "name": "nurse",
+        "description": "Nursing staff"
+      },
+      {
+        "name": "front_desk",
+        "description": "Front desk / reception staff"
+      },
+      {
+        "name": "patient",
+        "description": "Patient with access to own records"
+      },
+      {
+        "name": "api_client",
+        "description": "API client for system integrations"
+      }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "fhirhub-frontend",
+      "name": "FhirHub Frontend",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "rootUrl": "",
+      "baseUrl": "",
+      "redirectUris": [
+        "http://localhost:7002/*",
+        "https://fhirhub.davidle.dev/*"
+      ],
+      "webOrigins": [
+        "http://localhost:7002",
+        "https://fhirhub.davidle.dev"
+      ],
+      "protocolMappers": [
+        {
+          "name": "fhirhub-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "fhirhub-frontend",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "fhirhub-backend",
+      "name": "FhirHub Backend API",
+      "enabled": true,
+      "publicClient": false,
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "secret": "${KC_BACKEND_CLIENT_SECRET}"
+    }
+  ],
+  "users": [
+    {
+      "username": "admin",
+      "enabled": true,
+      "email": "admin@fhirhub.local",
+      "firstName": "System",
+      "lastName": "Administrator",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "${KC_ADMIN_PASSWORD}",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["admin"]
+    },
+    {
+      "username": "guest",
+      "enabled": true,
+      "email": "guest@fhirhub.local",
+      "firstName": "Guest",
+      "lastName": "User",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "guest",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["admin"]
+    }
+  ],
+  "defaultRoles": ["patient"]
+}

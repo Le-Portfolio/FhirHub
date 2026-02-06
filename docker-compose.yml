@@ -8,7 +8,7 @@ services:
       POSTGRES_USER: ${HAPI_DB_USER:-hapi}
       POSTGRES_PASSWORD: ${HAPI_DB_PASSWORD:-hapi}
     volumes:
-      - postgres-data:/var/lib/postgresql/data
+      - /home/ledavid993/app/volumes/fhirhub-postgres:/var/lib/postgresql
     networks:
       - fhirhub-internal
     healthcheck:
@@ -61,7 +61,7 @@ services:
       POSTGRES_USER: ${KC_DB_USER:-keycloak}
       POSTGRES_PASSWORD: ${KC_DB_PASSWORD:-keycloak}
     volumes:
-      - keycloak-postgres-data:/var/lib/postgresql/data
+      - /home/ledavid993/app/volumes/fhirhub-keycloak-postgres:/var/lib/postgresql
     networks:
       - fhirhub-internal
     healthcheck:
@@ -199,14 +199,6 @@ services:
       - "homepage.href=https://fhirhub.davidle.dev"
       - "homepage.description=FHIR Healthcare Platform"
       - "homepage.server=local"
-
-volumes:
-  postgres-data:
-    name: fhirhub-postgres-data
-    external: true
-  keycloak-postgres-data:
-    name: fhirhub-keycloak-postgres-data
-    external: true
 
 networks:
   fhirhub-internal:

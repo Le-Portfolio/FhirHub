@@ -13,3 +13,6 @@ dockge
 # Synthea generated data
 .synthea/
 synthea-data/
+
+# Docker bind-mount volumes
+/home/ledavid993/app/volumes/

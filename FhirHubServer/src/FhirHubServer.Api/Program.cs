@@ -202,6 +202,14 @@ try
     builder.Services.AddScoped<IDashboardRepository, HapiFhirDashboardRepository>();
     builder.Services.AddScoped<IExportRepository, HapiFhirExportRepository>();
 
+    // SMART on FHIR configuration
+    builder.Services.Configure<SmartConfigOptions>(options =>
+    {
+        options.PublicIssuer = builder.Configuration["Keycloak:PublicIssuer"]
+            ?? builder.Configuration["Keycloak:Authority"]
+            ?? "http://localhost:8180/realms/fhirhub";
+    });
+
     // Keycloak Admin API
     builder.Services.Configure<KeycloakAdminOptions>(options =>
     {

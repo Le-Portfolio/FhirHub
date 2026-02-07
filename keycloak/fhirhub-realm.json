@@ -30,6 +30,88 @@
       }
     ]
   },
+  "clientScopes": [
+    {
+      "name": "patient/Patient.read",
+      "description": "Read access to Patient resources",
+      "protocol": "openid-connect",
+      "attributes": {
+        "display.on.consent.screen": "true",
+        "consent.screen.text": "Read your demographic information (name, DOB, contact)"
+      }
+    },
+    {
+      "name": "patient/Observation.read",
+      "description": "Read access to Observation resources (vitals, labs)",
+      "protocol": "openid-connect",
+      "attributes": {
+        "display.on.consent.screen": "true",
+        "consent.screen.text": "Read your observations (vital signs, lab results)"
+      }
+    },
+    {
+      "name": "patient/Condition.read",
+      "description": "Read access to Condition resources",
+      "protocol": "openid-connect",
+      "attributes": {
+        "display.on.consent.screen": "true",
+        "consent.screen.text": "Read your health conditions and diagnoses"
+      }
+    },
+    {
+      "name": "patient/MedicationRequest.read",
+      "description": "Read access to MedicationRequest resources",
+      "protocol": "openid-connect",
+      "attributes": {
+        "display.on.consent.screen": "true",
+        "consent.screen.text": "Read your medication orders and prescriptions"
+      }
+    },
+    {
+      "name": "patient/Encounter.read",
+      "description": "Read access to Encounter resources",
+      "protocol": "openid-connect",
+      "attributes": {
+        "display.on.consent.screen": "true",
+        "consent.screen.text": "Read your visit and encounter records"
+      }
+    },
+    {
+      "name": "launch/patient",
+      "description": "Receive patient context on launch",
+      "protocol": "openid-connect",
+      "attributes": {
+        "display.on.consent.screen": "true",
+        "consent.screen.text": "Know which patient record is currently open"
+      }
+    },
+    {
+      "name": "fhirUser",
+      "description": "Access the FHIR user reference for the authenticated user",
+      "protocol": "openid-connect",
+      "attributes": {
+        "display.on.consent.screen": "true",
+        "consent.screen.text": "Access your FHIR user identity"
+      },
+      "protocolMappers": [
+        {
+          "name": "fhirUser-mapper",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "fhir_user_reference",
+            "claim.name": "fhirUser",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true",
+            "introspection.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ],
   "clients": [
     {
       "clientId": "fhirhub-frontend",
@@ -71,6 +153,70 @@
       "standardFlowEnabled": false,
       "directAccessGrantsEnabled": false,
       "secret": "${KC_BACKEND_CLIENT_SECRET}"
+    },
+    {
+      "clientId": "fhirhub-smart",
+      "name": "FhirHub SMART on FHIR Client",
+      "description": "Public SMART on FHIR client for the SMART Launch demo — uses PKCE and requires user consent for FHIR scopes",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "consentRequired": true,
+      "rootUrl": "",
+      "baseUrl": "/smart-launch",
+      "redirectUris": [
+        "http://localhost:7002/smart-launch/callback",
+        "https://fhirhub.davidle.dev/smart-launch/callback"
+      ],
+      "webOrigins": [
+        "http://localhost:7002",
+        "https://fhirhub.davidle.dev"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      },
+      "defaultClientScopes": [
+        "openid"
+      ],
+      "optionalClientScopes": [
+        "patient/Patient.read",
+        "patient/Observation.read",
+        "patient/Condition.read",
+        "patient/MedicationRequest.read",
+        "patient/Encounter.read",
+        "launch/patient",
+        "fhirUser"
+      ],
+      "protocolMappers": [
+        {
+          "name": "smart-fhir-patient-id-mapper",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "fhir_patient_id",
+            "claim.name": "fhir_patient_id",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true",
+            "introspection.token.claim": "true"
+          }
+        },
+        {
+          "name": "smart-audience-mapper",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "fhirhub-frontend",
+            "id.token.claim": "false",
+            "access.token.claim": "true",
+            "introspection.token.claim": "true"
+          }
+        }
+      ]
     }
   ],
   "users": [
@@ -80,6 +226,9 @@
       "email": "admin@fhirhub.local",
       "firstName": "System",
       "lastName": "Administrator",
+      "attributes": {
+        "fhir_user_reference": ["Practitioner/prac-admin"]
+      },
       "credentials": [
         {
           "type": "password",
@@ -95,6 +244,9 @@
       "email": "guest@fhirhub.local",
       "firstName": "Guest",
       "lastName": "User",
+      "attributes": {
+        "fhir_user_reference": ["Practitioner/prac-guest"]
+      },
       "credentials": [
         {
           "type": "password",

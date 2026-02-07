@@ -1,66 +1,25 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { PageContainer, PageHeader } from "@/components/layout/app-layout";
 import { LaunchSimulator } from "@/components/smart/launch-simulator";
 import { TokenInspector } from "@/components/smart/token-inspector";
 import { ScopeVisualizer } from "@/components/smart/scope-visualizer";
 import { ContextDisplay } from "@/components/smart/context-display";
+import { FhirDataViewer } from "@/components/smart/fhir-data-viewer";
 import { Zap, RefreshCw } from "@/components/ui/icons";
 import { Button } from "@/components/ui/button";
+import {
+  discoverSmartConfig,
+  generatePKCE,
+  generateState,
+  buildAuthorizationUrl,
+  SmartAuthState,
+  SmartTokenResponse,
+} from "@/lib/smart-auth";
 
-// Mock token data for demonstration
-const generateMockToken = (patientId: string, practitionerId: string) => {
-  const now = Math.floor(Date.now() / 1000);
-  const payload = {
-    iss: "https://fhir.example.com",
-    sub: practitionerId,
-    aud: "fhirhub-demo-client",
-    exp: now + 3600,
-    iat: now,
-    nbf: now,
-    jti: `token-${Math.random().toString(36).slice(2)}`,
-    patient: patientId,
-    fhirUser: `Practitioner/${practitionerId}`,
-    scope:
-      "openid fhirUser launch/patient patient/Patient.read patient/Observation.read patient/Condition.read patient/MedicationRequest.read",
-  };
-
-  const header = { alg: "RS256", typ: "JWT", kid: "key-1" };
-
-  // Create a mock JWT structure (not cryptographically valid, just for display)
-  const encodedHeader = btoa(JSON.stringify(header));
-  const encodedPayload = btoa(JSON.stringify(payload));
-  const mockSignature = btoa(
-    "mock-signature-" + Math.random().toString(36).slice(2)
-  );
-
-  return `${encodedHeader}.${encodedPayload}.${mockSignature}`;
-};
-
-const generateMockIdToken = (practitionerId: string) => {
-  const now = Math.floor(Date.now() / 1000);
-  const payload = {
-    iss: "https://fhir.example.com",
-    sub: practitionerId,
-    aud: "fhirhub-demo-client",
-    exp: now + 3600,
-    iat: now,
-    auth_time: now - 60,
-    name: "Dr. Robert Wilson",
-    email: "rwilson@hospital.example.com",
-    fhirUser: `Practitioner/${practitionerId}`,
-  };
-
-  const header = { alg: "RS256", typ: "JWT" };
-  const encodedHeader = btoa(JSON.stringify(header));
-  const encodedPayload = btoa(JSON.stringify(payload));
-  const mockSignature = btoa(
-    "mock-id-signature-" + Math.random().toString(36).slice(2)
-  );
-
-  return `${encodedHeader}.${encodedPayload}.${mockSignature}`;
-};
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:5197";
 
 interface SessionData {
   tokenData: {
@@ -68,9 +27,9 @@ interface SessionData {
     tokenType: string;
     expiresIn: number;
     scope: string;
-    idToken: string;
-    refreshToken: string;
-    patient: string;
+    idToken?: string;
+    refreshToken?: string;
+    patient?: string;
   };
   requestedScopes: string[];
   grantedScopes: string[];
@@ -80,126 +39,198 @@ interface SessionData {
     birthDate: string;
     gender: string;
     mrn: string;
-    phone: string;
-    email: string;
-    address: string;
-  };
+    phone?: string;
+    email?: string;
+    address?: string;
+  } | null;
   practitioner: {
     id: string;
     name: string;
     npi: string;
-    specialty: string;
-    organization: string;
-  };
-  encounter: {
-    id: string;
-    type: string;
-    status: string;
-    period: { start: string };
-    location: string;
-    reason: string;
+    specialty?: string;
+    organization?: string;
   } | null;
+  encounter: null;
+}
+
+function decodeTokenPayload(token: string): Record<string, unknown> | null {
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3) return null;
+    const base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const padded = base64 + "=".repeat((4 - (base64.length % 4)) % 4);
+    return JSON.parse(atob(padded));
+  } catch {
+    return null;
+  }
 }
 
 export default function SmartLaunchPage() {
   const [isLaunching, setIsLaunching] = useState(false);
   const [session, setSession] = useState<SessionData | null>(null);
+  const [launchError, setLaunchError] = useState<string | null>(null);
+
+  // On mount, check for a completed SMART session in sessionStorage
+  const restoreSession = useCallback(async () => {
+    const raw = sessionStorage.getItem("smart-session");
+    if (!raw) return;
+
+    try {
+      const stored = JSON.parse(raw) as {
+        tokenResponse: SmartTokenResponse;
+        requestedScopes: string[];
+        grantedScopes: string[];
+        fhirBaseUrl: string;
+      };
+
+      const { tokenResponse, requestedScopes, grantedScopes } = stored;
+
+      const payload = decodeTokenPayload(tokenResponse.access_token);
+      const patientId =
+        (payload?.fhir_patient_id as string) ||
+        tokenResponse.patient ||
+        (payload?.patient as string) ||
+        null;
+      const fhirUser = payload?.fhirUser as string | undefined;
+
+      // Fetch real patient data if we have a patient ID
+      let patientData: SessionData["patient"] = null;
+      if (patientId) {
+        try {
+          const res = await fetch(`${API_URL}/api/patients/${patientId}`, {
+            headers: {
+              Authorization: `Bearer ${tokenResponse.access_token}`,
+            },
+          });
+          if (res.ok) {
+            const fhirPatient = await res.json();
+            const officialName = fhirPatient.name || "";
+            patientData = {
+              id: fhirPatient.id || patientId,
+              name: officialName,
+              birthDate: fhirPatient.birthDate || "",
+              gender: fhirPatient.gender || "",
+              mrn: fhirPatient.mrn || fhirPatient.id || patientId,
+              phone: fhirPatient.phone || undefined,
+              email: fhirPatient.email || undefined,
+              address: fhirPatient.address || undefined,
+            };
+          }
+        } catch {
+          // API fetch failed — still show token data
+        }
+      }
+
+      // Build practitioner context from token claims
+      let practitionerData: SessionData["practitioner"] = null;
+      if (fhirUser && fhirUser.startsWith("Practitioner/")) {
+        const idTokenPayload = tokenResponse.id_token
+          ? decodeTokenPayload(tokenResponse.id_token)
+          : null;
+        practitionerData = {
+          id: fhirUser.replace("Practitioner/", ""),
+          name:
+            (idTokenPayload?.name as string) ||
+            (payload?.preferred_username as string) ||
+            "Unknown",
+          npi: "",
+          specialty: undefined,
+          organization: undefined,
+        };
+      }
+
+      setSession({
+        tokenData: {
+          accessToken: tokenResponse.access_token,
+          tokenType: tokenResponse.token_type,
+          expiresIn: tokenResponse.expires_in,
+          scope: tokenResponse.scope || grantedScopes.join(" "),
+          idToken: tokenResponse.id_token,
+          refreshToken: tokenResponse.refresh_token,
+          patient: patientId || undefined,
+        },
+        requestedScopes,
+        grantedScopes,
+        patient: patientData,
+        practitioner: practitionerData,
+        encounter: null,
+      });
+    } catch {
+      // Invalid stored session — clear it
+      sessionStorage.removeItem("smart-session");
+    }
+  }, []);
+
+  useEffect(() => {
+    restoreSession();
+  }, [restoreSession]);
 
   const handleLaunch = async (config: {
     fhirServer: string;
     clientId: string;
-    launchContext: string;
-    patientId?: string;
-    practitionerId?: string;
+    scopes: string[];
+    forceLogin?: boolean;
   }) => {
     setIsLaunching(true);
+    setLaunchError(null);
 
-    // Simulate OAuth flow delay
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+    try {
+      // 1. Discover SMART configuration from the FHIR server
+      const smartConfig = await discoverSmartConfig(config.fhirServer);
 
-    const patientId = config.patientId || "patient-123";
-    const practitionerId = config.practitionerId || "prac-001";
+      // 2. Generate PKCE verifier + challenge
+      const pkce = await generatePKCE();
 
-    const requestedScopes = [
-      "openid",
-      "fhirUser",
-      "launch/patient",
-      "patient/Patient.read",
-      "patient/Observation.read",
-      "patient/Condition.read",
-      "patient/MedicationRequest.read",
-      "patient/DiagnosticReport.read",
-      "patient/*.write",
-    ];
+      // 3. Generate state for CSRF protection
+      const state = generateState();
 
-    // Simulate some scopes being denied
-    const grantedScopes = requestedScopes.filter(
-      (s) => !s.includes(".write") && !s.includes("DiagnosticReport")
-    );
+      // 4. Build redirect URI
+      const redirectUri = `${window.location.origin}/smart-launch/callback`;
 
-    const sessionData: SessionData = {
-      tokenData: {
-        accessToken: generateMockToken(patientId, practitionerId),
-        tokenType: "Bearer",
-        expiresIn: 3600,
-        scope: grantedScopes.join(" "),
-        idToken: generateMockIdToken(practitionerId),
-        refreshToken: `refresh-${Math.random().toString(36).slice(2, 18)}`,
-        patient: patientId,
-      },
-      requestedScopes,
-      grantedScopes,
-      patient: {
-        id: patientId,
-        name:
-          patientId === "patient-123"
-            ? "Sarah Johnson"
-            : patientId === "patient-456"
-              ? "Michael Chen"
-              : "Emily Davis",
-        birthDate: "1985-03-15",
-        gender: "Female",
-        mrn: "MRN-001234",
-        phone: "(555) 123-4567",
-        email: "sarah.johnson@email.com",
-        address: "123 Main Street, Anytown, CA 90210",
-      },
-      practitioner: {
-        id: practitionerId,
-        name:
-          practitionerId === "prac-001"
-            ? "Dr. Robert Wilson"
-            : "Dr. Lisa Anderson",
-        npi: "1234567890",
-        specialty: "Internal Medicine",
-        organization: "City General Hospital",
-      },
-      encounter:
-        config.launchContext === "patient"
-          ? {
-              id: "enc-001",
-              type: "Office Visit",
-              status: "in-progress",
-              period: { start: new Date().toISOString() },
-              location: "Clinic A, Room 204",
-              reason: "Annual Physical Examination",
-            }
-          : null,
-    };
+      // 5. Save auth state to sessionStorage for the callback page
+      const authState: SmartAuthState = {
+        state,
+        verifier: pkce.verifier,
+        requestedScopes: config.scopes,
+        fhirBaseUrl: config.fhirServer,
+        clientId: config.clientId,
+        redirectUri,
+        tokenEndpoint: smartConfig.token_endpoint,
+      };
+      sessionStorage.setItem("smart-auth-state", JSON.stringify(authState));
 
-    setSession(sessionData);
-    setIsLaunching(false);
+      // 6. Build authorization URL and redirect
+      const authUrl = buildAuthorizationUrl({
+        authorizationEndpoint: smartConfig.authorization_endpoint,
+        clientId: config.clientId,
+        redirectUri,
+        scopes: config.scopes,
+        state,
+        codeChallenge: pkce.challenge,
+        forceLogin: config.forceLogin,
+      });
+
+      window.location.href = authUrl;
+    } catch (err) {
+      setIsLaunching(false);
+      setLaunchError(
+        err instanceof Error ? err.message : "Failed to start SMART launch"
+      );
+    }
   };
 
   const handleReset = () => {
+    sessionStorage.removeItem("smart-session");
+    sessionStorage.removeItem("smart-auth-state");
     setSession(null);
+    setLaunchError(null);
   };
 
   return (
     <PageContainer>
       <PageHeader
-        title="SMART on FHIR Demo"
-        description="Simulate EHR launch and explore OAuth tokens and contexts"
+        title="SMART on FHIR Launch"
+        description="Perform a real OAuth2 PKCE flow against Keycloak and inspect tokens, scopes, and FHIR data"
         icon={Zap}
         actions={
           session && (
@@ -210,6 +241,13 @@ export default function SmartLaunchPage() {
           )
         }
       />
+
+      {launchError && (
+        <div className="mb-6 p-4 bg-error/10 border border-error/30 rounded-lg">
+          <p className="font-medium text-error">Launch Error</p>
+          <p className="text-sm text-error/80 mt-1">{launchError}</p>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Left Column - Launch & Token */}
@@ -231,6 +269,17 @@ export default function SmartLaunchPage() {
           />
         </div>
       </div>
+
+      {/* Full-width FHIR Data Viewer below the grid */}
+      {session && (
+        <div className="mt-6">
+          <FhirDataViewer
+            accessToken={session.tokenData.accessToken}
+            patientId={session.tokenData.patient || null}
+            grantedScopes={session.grantedScopes}
+          />
+        </div>
+      )}
     </PageContainer>
   );
 }

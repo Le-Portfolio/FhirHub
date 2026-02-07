@@ -64,14 +64,20 @@ export function TokenInspector({ tokenData, className }: TokenInspectorProps) {
     );
   }
 
+  const b64decode = (str: string) => {
+    const base64 = str.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = base64 + "=".repeat((4 - (base64.length % 4)) % 4);
+    return atob(padded);
+  };
+
   const decodeJWT = (token: string): DecodedJWT | null => {
     try {
       const parts = token.split(".");
       if (parts.length !== 3) return null;
 
       return {
-        header: JSON.parse(atob(parts[0])),
-        payload: JSON.parse(atob(parts[1])),
+        header: JSON.parse(b64decode(parts[0])),
+        payload: JSON.parse(b64decode(parts[1])),
         signature: parts[2],
       };
     } catch {

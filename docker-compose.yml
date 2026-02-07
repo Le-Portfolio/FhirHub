@@ -12,7 +12,11 @@ services:
     networks:
       - fhirhub-internal
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${HAPI_DB_USER:-hapi} -d ${HAPI_DB_NAME:-hapi}"]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${HAPI_DB_USER:-hapi} -d ${HAPI_DB_NAME:-hapi}",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -21,8 +25,6 @@ services:
   hapi-fhir:
     image: hapiproject/hapi:${HAPI_FHIR_VERSION:-latest}
     container_name: ${COMPOSE_PROJECT_NAME:-fhirhub}-hapi
-    ports:
-      - "${HAPI_PORT:-8080}:8080"
     environment:
       JAVA_OPTS: "-Xms512m -Xmx1024m"
       spring.datasource.url: jdbc:postgresql://postgres:5432/${HAPI_DB_NAME:-hapi}
@@ -65,7 +67,11 @@ services:
     networks:
       - fhirhub-internal
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${KC_DB_USER:-keycloak} -d ${KC_DB_NAME:-keycloak}"]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${KC_DB_USER:-keycloak} -d ${KC_DB_NAME:-keycloak}",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -75,8 +81,6 @@ services:
     image: quay.io/keycloak/keycloak:${KEYCLOAK_VERSION:-26.0}
     container_name: ${COMPOSE_PROJECT_NAME:-fhirhub}-keycloak
     command: start-dev --import-realm
-    ports:
-      - "${KEYCLOAK_PORT:-8180}:8080"
     volumes:
       - ./keycloak/fhirhub-realm.json:/opt/keycloak/data/import/fhirhub-realm.json:ro
     environment:
@@ -126,8 +130,6 @@ services:
       context: ./FhirHubServer
       dockerfile: src/FhirHubServer.Api/Dockerfile
     container_name: ${COMPOSE_PROJECT_NAME:-fhirhub}-api
-    ports:
-      - "${API_PORT:-5197}:8080"
     environment:
       ASPNETCORE_URLS: http://+:8080
       HapiFhir__BaseUrl: http://hapi-fhir:8080/fhir
@@ -175,8 +177,6 @@ services:
         NEXT_PUBLIC_KEYCLOAK_REALM: ${NEXT_PUBLIC_KEYCLOAK_REALM:-fhirhub}
         NEXT_PUBLIC_KEYCLOAK_CLIENT_ID: ${NEXT_PUBLIC_KEYCLOAK_CLIENT_ID:-fhirhub-frontend}
     container_name: ${COMPOSE_PROJECT_NAME:-fhirhub}-frontend
-    ports:
-      - "${FRONTEND_PORT:-7002}:3000"
     depends_on:
       fhirhub-api:
         condition: service_started

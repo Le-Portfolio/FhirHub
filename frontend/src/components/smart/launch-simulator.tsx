@@ -4,81 +4,111 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
-import {
-  Play,
-  Server,
-  User,
-  Stethoscope,
-  Building,
-  RefreshCw,
-} from "@/components/ui/icons";
+import { Play, Server, RefreshCw, Shield, Check } from "@/components/ui/icons";
 
-interface LaunchConfig {
-  fhirServer: string;
-  clientId: string;
-  launchContext: "patient" | "practitioner" | "standalone";
-  patientId?: string;
-  practitionerId?: string;
-  encounterId?: string;
-}
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:5197";
+
+const AVAILABLE_SCOPES = [
+  {
+    id: "openid",
+    label: "OpenID Connect",
+    description: "Basic identity verification",
+    default: true,
+    required: true,
+  },
+  {
+    id: "fhirUser",
+    label: "FHIR User",
+    description: "Your FHIR user resource reference",
+    default: true,
+  },
+  {
+    id: "launch/patient",
+    label: "Patient Context",
+    description: "Receive patient ID in launch context",
+    default: true,
+  },
+  {
+    id: "patient/Patient.read",
+    label: "Patient Demographics",
+    description: "Read patient name, DOB, contact info",
+    default: true,
+  },
+  {
+    id: "patient/Observation.read",
+    label: "Observations",
+    description: "Read vital signs, lab results",
+    default: true,
+  },
+  {
+    id: "patient/Condition.read",
+    label: "Conditions",
+    description: "Read diagnoses and health conditions",
+    default: true,
+  },
+  {
+    id: "patient/MedicationRequest.read",
+    label: "Medications",
+    description: "Read medication orders and prescriptions",
+    default: true,
+  },
+  {
+    id: "patient/Encounter.read",
+    label: "Encounters",
+    description: "Read visit and admission records",
+    default: false,
+  },
+];
 
 interface LaunchSimulatorProps {
-  onLaunch: (config: LaunchConfig) => void;
+  onLaunch: (config: {
+    fhirServer: string;
+    clientId: string;
+    scopes: string[];
+    forceLogin?: boolean;
+  }) => void;
   isLaunching?: boolean;
   className?: string;
 }
-
-const mockEHRs = [
-  {
-    id: "epic",
-    name: "Epic MyChart",
-    url: "https://fhir.epic.com/interconnect-fhir-oauth/api/FHIR/R4",
-  },
-  {
-    id: "cerner",
-    name: "Cerner Millennium",
-    url: "https://fhir-myrecord.cerner.com/r4/ec2458f2-1e24-41c8-b71b-0e701af7583d",
-  },
-  {
-    id: "allscripts",
-    name: "Allscripts Pro EHR",
-    url: "https://open.allscripts.com/fhir/r4",
-  },
-  { id: "hapi", name: "HAPI FHIR Server", url: "https://hapi.fhir.org/baseR4" },
-];
-
-const mockPatients = [
-  { id: "patient-123", name: "Sarah Johnson", mrn: "MRN-001234" },
-  { id: "patient-456", name: "Michael Chen", mrn: "MRN-005678" },
-  { id: "patient-789", name: "Emily Davis", mrn: "MRN-009012" },
-];
-
-const mockPractitioners = [
-  { id: "prac-001", name: "Dr. Robert Wilson", npi: "1234567890" },
-  { id: "prac-002", name: "Dr. Lisa Anderson", npi: "0987654321" },
-];
 
 export function LaunchSimulator({
   onLaunch,
   isLaunching = false,
   className,
 }: LaunchSimulatorProps) {
-  const [config, setConfig] = useState<LaunchConfig>({
-    fhirServer: mockEHRs[0].url,
-    clientId: "fhirhub-demo-client",
-    launchContext: "patient",
-    patientId: mockPatients[0].id,
-    practitionerId: mockPractitioners[0].id,
-  });
+  const [clientId, setClientId] = useState("fhirhub-smart");
+  const [fhirServer, setFhirServer] = useState(API_URL);
+  const [forceLogin, setForceLogin] = useState(false);
+  const [selectedScopes, setSelectedScopes] = useState<Set<string>>(
+    () =>
+      new Set(
+        AVAILABLE_SCOPES.filter((s) => s.default).map((s) => s.id)
+      )
+  );
 
-  const [selectedEHR, setSelectedEHR] = useState(mockEHRs[0].id);
+  const toggleScope = (scopeId: string) => {
+    const scope = AVAILABLE_SCOPES.find((s) => s.id === scopeId);
+    if (scope?.required) return; // Can't deselect required scopes
 
-  const handleEHRChange = (ehrId: string) => {
-    const ehr = mockEHRs.find((e) => e.id === ehrId);
-    if (ehr) {
-      setSelectedEHR(ehrId);
-      setConfig({ ...config, fhirServer: ehr.url });
-    }
+    setSelectedScopes((prev) => {
+      const next = new Set(prev);
+      if (next.has(scopeId)) {
+        next.delete(scopeId);
+      } else {
+        next.add(scopeId);
+      }
+      return next;
+    });
+  };
+
+  const handleLaunch = () => {
+    onLaunch({
+      fhirServer,
+      clientId,
+      scopes: Array.from(selectedScopes),
+      forceLogin,
+    });
   };
 
   return (
@@ -93,118 +123,32 @@ export function LaunchSimulator({
           <Play className="w-5 h-5 text-primary" />
         </div>
         <div>
-          <h3 className="font-semibold">EHR Launch Simulator</h3>
+          <h3 className="font-semibold">SMART App Launcher</h3>
           <p className="text-sm text-base-content/60">
-            Simulate a SMART on FHIR launch from an EHR system
+            Launch a real OAuth2 PKCE flow against Keycloak
           </p>
         </div>
       </div>
 
       <div className="space-y-6">
-        {/* EHR Selection */}
+        {/* FHIR Server */}
         <div>
           <label className="label">
-            <span className="label-text font-medium">EHR System</span>
+            <span className="label-text font-medium flex items-center gap-2">
+              <Server className="w-4 h-4" />
+              FHIR Server (API Gateway)
+            </span>
           </label>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {mockEHRs.map((ehr) => (
-              <button
-                key={ehr.id}
-                onClick={() => handleEHRChange(ehr.id)}
-                className={cn(
-                  "p-3 rounded-lg border-2 text-left transition-colors",
-                  selectedEHR === ehr.id
-                    ? "border-primary bg-primary/5"
-                    : "border-base-200 hover:border-base-300"
-                )}
-              >
-                <Server className="w-5 h-5 mb-2 text-base-content/70" />
-                <p className="font-medium text-sm">{ehr.name}</p>
-              </button>
-            ))}
-          </div>
+          <input
+            type="text"
+            className="input input-bordered w-full font-mono text-sm"
+            value={fhirServer}
+            onChange={(e) => setFhirServer(e.target.value)}
+          />
+          <p className="text-xs text-base-content/50 mt-1">
+            The .NET API serves .well-known/smart-configuration
+          </p>
         </div>
-
-        {/* Launch Context */}
-        <div>
-          <label className="label">
-            <span className="label-text font-medium">Launch Context</span>
-          </label>
-          <div className="flex gap-3">
-            {[
-              { id: "patient", label: "Patient Launch", icon: User },
-              {
-                id: "practitioner",
-                label: "Practitioner Launch",
-                icon: Stethoscope,
-              },
-              { id: "standalone", label: "Standalone Launch", icon: Building },
-            ].map((ctx) => (
-              <button
-                key={ctx.id}
-                onClick={() =>
-                  setConfig({
-                    ...config,
-                    launchContext: ctx.id as LaunchConfig["launchContext"],
-                  })
-                }
-                className={cn(
-                  "flex-1 flex items-center gap-2 p-3 rounded-lg border-2 transition-colors",
-                  config.launchContext === ctx.id
-                    ? "border-primary bg-primary/5"
-                    : "border-base-200 hover:border-base-300"
-                )}
-              >
-                <ctx.icon className="w-4 h-4" />
-                <span className="text-sm font-medium">{ctx.label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Patient Selection (for patient launch) */}
-        {config.launchContext === "patient" && (
-          <div>
-            <label className="label">
-              <span className="label-text font-medium">Select Patient</span>
-            </label>
-            <select
-              className="select select-bordered w-full"
-              value={config.patientId}
-              onChange={(e) =>
-                setConfig({ ...config, patientId: e.target.value })
-              }
-            >
-              {mockPatients.map((patient) => (
-                <option key={patient.id} value={patient.id}>
-                  {patient.name} ({patient.mrn})
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
-
-        {/* Practitioner Selection */}
-        {config.launchContext !== "standalone" && (
-          <div>
-            <label className="label">
-              <span className="label-text font-medium">Practitioner</span>
-            </label>
-            <select
-              className="select select-bordered w-full"
-              value={config.practitionerId}
-              onChange={(e) =>
-                setConfig({ ...config, practitionerId: e.target.value })
-              }
-            >
-              {mockPractitioners.map((prac) => (
-                <option key={prac.id} value={prac.id}>
-                  {prac.name} (NPI: {prac.npi})
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
 
         {/* Client ID */}
         <div>
@@ -214,41 +158,101 @@ export function LaunchSimulator({
           <input
             type="text"
             className="input input-bordered w-full font-mono"
-            value={config.clientId}
-            onChange={(e) => setConfig({ ...config, clientId: e.target.value })}
+            value={clientId}
+            onChange={(e) => setClientId(e.target.value)}
           />
         </div>
 
-        {/* FHIR Server URL */}
+        {/* Scope Picker */}
         <div>
           <label className="label">
-            <span className="label-text font-medium">FHIR Server URL</span>
+            <span className="label-text font-medium flex items-center gap-2">
+              <Shield className="w-4 h-4" />
+              Requested Scopes
+            </span>
           </label>
-          <input
-            type="text"
-            className="input input-bordered w-full font-mono text-sm"
-            value={config.fhirServer}
-            onChange={(e) =>
-              setConfig({ ...config, fhirServer: e.target.value })
-            }
-          />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {AVAILABLE_SCOPES.map((scope) => {
+              const isSelected = selectedScopes.has(scope.id);
+              return (
+                <button
+                  key={scope.id}
+                  onClick={() => toggleScope(scope.id)}
+                  disabled={scope.required}
+                  className={cn(
+                    "flex items-start gap-2 p-3 rounded-lg border text-left transition-colors",
+                    isSelected
+                      ? "border-primary bg-primary/5"
+                      : "border-base-200 hover:border-base-300",
+                    scope.required && "cursor-default"
+                  )}
+                >
+                  <div
+                    className={cn(
+                      "w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 mt-0.5",
+                      isSelected
+                        ? "bg-primary border-primary"
+                        : "border-base-300"
+                    )}
+                  >
+                    {isSelected && (
+                      <Check className="w-3 h-3 text-primary-content" />
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-medium text-sm">{scope.label}</p>
+                    <p className="text-xs text-base-content/50 truncate">
+                      {scope.description}
+                    </p>
+                    <code className="text-[10px] text-base-content/40">
+                      {scope.id}
+                    </code>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Force Login Toggle */}
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setForceLogin(!forceLogin)}
+            className={cn(
+              "w-10 h-6 rounded-full relative transition-colors",
+              forceLogin ? "bg-primary" : "bg-base-300"
+            )}
+          >
+            <span
+              className={cn(
+                "absolute top-1 w-4 h-4 rounded-full bg-white transition-all",
+                forceLogin ? "left-5" : "left-1"
+              )}
+            />
+          </button>
+          <div>
+            <p className="text-sm font-medium">Force Re-authentication</p>
+            <p className="text-xs text-base-content/50">
+              Adds prompt=login to test with different users
+            </p>
+          </div>
         </div>
 
         {/* Launch Button */}
         <Button
           className="w-full"
-          onClick={() => onLaunch(config)}
+          onClick={handleLaunch}
           disabled={isLaunching}
         >
           {isLaunching ? (
             <>
               <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-              Launching...
+              Redirecting to Keycloak...
             </>
           ) : (
             <>
               <Play className="w-4 h-4 mr-2" />
-              Simulate Launch
+              Launch SMART App
             </>
           )}
         </Button>

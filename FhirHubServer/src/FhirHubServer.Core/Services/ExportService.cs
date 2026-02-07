@@ -29,4 +29,10 @@ public class ExportService
 
     public Task<ExportJobDto> RetryJobAsync(string id, CancellationToken ct = default)
         => _repository.RetryJobAsync(id, ct);
+
+    public Task<IEnumerable<ResourceCountDto>> GetResourceCountsAsync(CancellationToken ct = default)
+        => _repository.GetResourceCountsAsync(ct);
+
+    public Task<(string FilePath, string ContentType, string FileName)?> GetExportFileAsync(string id, CancellationToken ct = default)
+        => _repository.GetExportFileAsync(id, ct);
 }

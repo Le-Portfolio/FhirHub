@@ -2,7 +2,7 @@
 // Manages export jobs through FhirHubServer backend
 
 import type { IExportRepository } from "../interfaces";
-import type { ExportJobDTO, ExportConfigDTO } from "@/types";
+import type { ExportJobDTO, ExportConfigDTO, ResourceCountDTO } from "@/types";
 import type { ApiClient } from "@/lib/api-client";
 
 export class ExportRepository implements IExportRepository {
@@ -32,6 +32,16 @@ export class ExportRepository implements IExportRepository {
 
   async retryJob(id: string): Promise<ExportJobDTO> {
     return this.apiClient.post<ExportJobDTO>(`/api/exports/${id}/retry`);
+  }
+
+  async getResourceCounts(): Promise<ResourceCountDTO[]> {
+    return this.apiClient.get<ResourceCountDTO[]>(
+      "/api/exports/resource-counts"
+    );
+  }
+
+  async downloadExport(id: string): Promise<Blob> {
+    return this.apiClient.getBlob(`/api/exports/${id}/download`);
   }
 
   onJobProgress(

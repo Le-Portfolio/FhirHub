@@ -9,11 +9,18 @@ public record ExportJobDto(
     string? CompletedAt,
     int? Progress,
     string? DownloadUrl,
-    string? Error
+    string? Error,
+    long? FileSize,
+    string? ExpiresAt
 );
 
 public record ExportConfigDto(
     IEnumerable<string> ResourceTypes,
     string Format,
-    bool IncludeReferences
+    bool IncludeReferences,
+    DateRangeDto? DateRange = null
 );
+
+public record DateRangeDto(string Start, string End);
+
+public record ResourceCountDto(string ResourceType, int Count);

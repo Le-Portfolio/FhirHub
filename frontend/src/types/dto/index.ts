@@ -74,6 +74,7 @@ export type {
   ExportFormat,
   ExportJobDTO,
   ExportConfigDTO,
+  ResourceCountDTO,
 } from "./export.dto";
 
 // User Management DTOs

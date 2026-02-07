@@ -17,6 +17,13 @@ public class HapiFhirExportRepository : IExportRepository
     // In-memory storage for export jobs (in production, use a persistent store)
     private static readonly ConcurrentDictionary<string, ExportJobState> _jobs = new();
 
+    private static readonly string[] SupportedResourceTypes =
+    [
+        "Patient", "Observation", "Condition", "MedicationRequest",
+        "DiagnosticReport", "Encounter", "Procedure", "Immunization",
+        "AllergyIntolerance", "DocumentReference"
+    ];
+
     public HapiFhirExportRepository(IFhirClientFactory clientFactory, ILogger<HapiFhirExportRepository> logger)
     {
         _clientFactory = clientFactory;
@@ -52,6 +59,7 @@ public class HapiFhirExportRepository : IExportRepository
             ResourceTypes = config.ResourceTypes.ToList(),
             Format = config.Format,
             IncludeReferences = config.IncludeReferences,
+            DateRange = config.DateRange,
             CreatedAt = DateTime.UtcNow,
             Progress = 0
         };
@@ -117,6 +125,7 @@ public class HapiFhirExportRepository : IExportRepository
             ResourceTypes = job.ResourceTypes,
             Format = job.Format,
             IncludeReferences = job.IncludeReferences,
+            DateRange = job.DateRange,
             CreatedAt = DateTime.UtcNow,
             Progress = 0
         };
@@ -127,6 +136,37 @@ public class HapiFhirExportRepository : IExportRepository
         _ = Task.Run(() => ProcessExportAsync(newJobId, ct), ct);
 
         return Task.FromResult(ToDto(newJob));
+    }
+
+    public async Task<IEnumerable<ResourceCountDto>> GetResourceCountsAsync(CancellationToken ct = default)
+    {
+        var client = _clientFactory.CreateClient();
+
+        var tasks = SupportedResourceTypes.Select(async resourceType =>
+        {
+            var count = await GetResourceCountAsync(client, resourceType, ct);
+            return new ResourceCountDto(resourceType, count);
+        });
+
+        var results = await Task.WhenAll(tasks);
+        return results;
+    }
+
+    public Task<(string FilePath, string ContentType, string FileName)?> GetExportFileAsync(string id, CancellationToken ct = default)
+    {
+        if (!_jobs.TryGetValue(id, out var job))
+            return Task.FromResult<(string, string, string)?>(null);
+
+        if (job.Status != "completed" || string.IsNullOrEmpty(job.OutputPath))
+            return Task.FromResult<(string, string, string)?>(null);
+
+        if (!File.Exists(job.OutputPath))
+            return Task.FromResult<(string, string, string)?>(null);
+
+        var contentType = job.Format == "ndjson" ? "application/x-ndjson" : "application/json";
+        var fileName = Path.GetFileName(job.OutputPath);
+
+        return Task.FromResult<(string, string, string)?>((job.OutputPath, contentType, fileName));
     }
 
     private async Task ProcessExportAsync(string jobId, CancellationToken ct)
@@ -156,7 +196,7 @@ public class HapiFhirExportRepository : IExportRepository
 
                 try
                 {
-                    var resources = await FetchResourcesAsync(client, resourceType, ct);
+                    var resources = await FetchResourcesAsync(client, resourceType, job.DateRange, ct);
                     allResources.AddRange(resources);
 
                     processedTypes++;
@@ -170,6 +210,12 @@ public class HapiFhirExportRepository : IExportRepository
 
             // Write output
             var outputPath = await WriteExportAsync(exportDir, allResources, job.Format, ct);
+
+            // Calculate file size
+            var fileInfo = new FileInfo(outputPath);
+            job.FileSize = fileInfo.Length;
+            job.ExpiresAt = DateTime.UtcNow.AddHours(24);
+
             job.Progress = 100;
             job.Status = "completed";
             job.CompletedAt = DateTime.UtcNow;
@@ -186,10 +232,18 @@ public class HapiFhirExportRepository : IExportRepository
         }
     }
 
-    private async Task<List<Resource>> FetchResourcesAsync(FhirClient client, string resourceType, CancellationToken ct)
+    private async Task<List<Resource>> FetchResourcesAsync(FhirClient client, string resourceType, DateRangeDto? dateRange, CancellationToken ct)
     {
         var resources = new List<Resource>();
         var searchParams = new SearchParams().LimitTo(100);
+
+        if (dateRange != null)
+        {
+            if (!string.IsNullOrEmpty(dateRange.Start))
+                searchParams.Add("_lastUpdated", $"ge{dateRange.Start}");
+            if (!string.IsNullOrEmpty(dateRange.End))
+                searchParams.Add("_lastUpdated", $"le{dateRange.End}");
+        }
 
         Bundle? bundle = resourceType switch
         {
@@ -202,7 +256,7 @@ public class HapiFhirExportRepository : IExportRepository
             "Procedure" => await client.SearchAsync<Procedure>(searchParams),
             "Immunization" => await client.SearchAsync<Immunization>(searchParams),
             "AllergyIntolerance" => await client.SearchAsync<AllergyIntolerance>(searchParams),
-            "CarePlan" => await client.SearchAsync<CarePlan>(searchParams),
+            "DocumentReference" => await client.SearchAsync<DocumentReference>(searchParams),
             _ => null
         };
 
@@ -275,6 +329,37 @@ public class HapiFhirExportRepository : IExportRepository
         }
     }
 
+    private async Task<int> GetResourceCountAsync(FhirClient client, string resourceType, CancellationToken ct)
+    {
+        try
+        {
+            var searchParams = new SearchParams();
+            searchParams.Add("_summary", "count");
+
+            Bundle? bundle = resourceType switch
+            {
+                "Patient" => await client.SearchAsync<Patient>(searchParams),
+                "Observation" => await client.SearchAsync<Observation>(searchParams),
+                "Condition" => await client.SearchAsync<Condition>(searchParams),
+                "MedicationRequest" => await client.SearchAsync<MedicationRequest>(searchParams),
+                "DiagnosticReport" => await client.SearchAsync<DiagnosticReport>(searchParams),
+                "Encounter" => await client.SearchAsync<Encounter>(searchParams),
+                "Procedure" => await client.SearchAsync<Procedure>(searchParams),
+                "Immunization" => await client.SearchAsync<Immunization>(searchParams),
+                "AllergyIntolerance" => await client.SearchAsync<AllergyIntolerance>(searchParams),
+                "DocumentReference" => await client.SearchAsync<DocumentReference>(searchParams),
+                _ => null
+            };
+
+            return bundle?.Total ?? 0;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to get count for {ResourceType}", resourceType);
+            return 0;
+        }
+    }
+
     private static ExportJobDto ToDto(ExportJobState job)
     {
         return new ExportJobDto(
@@ -286,7 +371,9 @@ public class HapiFhirExportRepository : IExportRepository
             CompletedAt: job.CompletedAt?.ToString("o"),
             Progress: job.Progress,
             DownloadUrl: job.DownloadUrl,
-            Error: job.Error
+            Error: job.Error,
+            FileSize: job.FileSize,
+            ExpiresAt: job.ExpiresAt?.ToString("o")
         );
     }
 
@@ -297,6 +384,7 @@ public class HapiFhirExportRepository : IExportRepository
         public List<string> ResourceTypes { get; set; } = new();
         public string Format { get; set; } = "json";
         public bool IncludeReferences { get; set; }
+        public DateRangeDto? DateRange { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime? CompletedAt { get; set; }
         public int Progress { get; set; }
@@ -304,5 +392,7 @@ public class HapiFhirExportRepository : IExportRepository
         public string? Error { get; set; }
         public string? OutputPath { get; set; }
         public bool CancellationRequested { get; set; }
+        public long? FileSize { get; set; }
+        public DateTime? ExpiresAt { get; set; }
     }
 }

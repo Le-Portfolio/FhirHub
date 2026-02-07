@@ -27,6 +27,14 @@ public class ExportsController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("resource-counts")]
+    [Authorize(Policy = AuthorizationPolicies.CanManageExports)]
+    public async Task<IActionResult> GetResourceCounts(CancellationToken ct)
+    {
+        var result = await _exportService.GetResourceCountsAsync(ct);
+        return Ok(result);
+    }
+
     [HttpGet("{id}")]
     [Authorize(Policy = AuthorizationPolicies.CanManageExports)]
     public async Task<IActionResult> GetById(string id, CancellationToken ct)
@@ -35,6 +43,18 @@ public class ExportsController : ControllerBase
         if (result is null)
             return NotFound();
         return Ok(result);
+    }
+
+    [HttpGet("{id}/download")]
+    [Authorize(Policy = AuthorizationPolicies.CanManageExports)]
+    public async Task<IActionResult> Download(string id, CancellationToken ct)
+    {
+        var result = await _exportService.GetExportFileAsync(id, ct);
+        if (result is null)
+            return NotFound();
+
+        var (filePath, contentType, fileName) = result.Value;
+        return PhysicalFile(filePath, contentType, fileName);
     }
 
     [HttpPost]

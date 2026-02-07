@@ -16,6 +16,7 @@ import type {
   TimelineEventDTO,
   ExportJobDTO,
   ExportConfigDTO,
+  ResourceCountDTO,
   DashboardMetricDTO,
   AlertDTO,
   ActivityDTO,
@@ -199,6 +200,16 @@ export interface IExportRepository {
     jobId: string,
     callback: (job: ExportJobDTO) => void
   ): () => void;
+
+  /**
+   * Get resource counts for all supported resource types
+   */
+  getResourceCounts(): Promise<ResourceCountDTO[]>;
+
+  /**
+   * Download an export file as a blob
+   */
+  downloadExport(id: string): Promise<Blob>;
 }
 
 /**

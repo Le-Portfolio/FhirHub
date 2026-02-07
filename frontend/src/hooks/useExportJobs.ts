@@ -23,6 +23,7 @@ export interface UseExportJobsResult {
   retryJob: (id: string) => Promise<void>;
   deleteJob: (id: string) => Promise<void>;
   cancelJob: (id: string) => Promise<void>;
+  downloadJob: (id: string) => Promise<void>;
 }
 
 export function useExportJobs(
@@ -124,6 +125,22 @@ export function useExportJobs(
     [exportService]
   );
 
+  const downloadJob = useCallback(
+    async (id: string): Promise<void> => {
+      const blob = await exportService.downloadExport(id);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download =
+        blob.type === "application/x-ndjson" ? "export.ndjson" : "export.json";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    },
+    [exportService]
+  );
+
   useEffect(() => {
     if (immediate) {
       fetchJobs();
@@ -139,5 +156,6 @@ export function useExportJobs(
     retryJob,
     deleteJob,
     cancelJob,
+    downloadJob,
   };
 }

@@ -10,4 +10,6 @@ public interface IExportRepository
     Task CancelJobAsync(string id, CancellationToken ct = default);
     Task DeleteJobAsync(string id, CancellationToken ct = default);
     Task<ExportJobDto> RetryJobAsync(string id, CancellationToken ct = default);
+    Task<IEnumerable<ResourceCountDto>> GetResourceCountsAsync(CancellationToken ct = default);
+    Task<(string FilePath, string ContentType, string FileName)?> GetExportFileAsync(string id, CancellationToken ct = default);
 }

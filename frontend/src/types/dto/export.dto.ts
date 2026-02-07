@@ -17,7 +17,7 @@ export type ExportStatus =
 /**
  * Export format
  */
-export type ExportFormat = "ndjson" | "json" | "csv";
+export type ExportFormat = "ndjson" | "json";
 
 /**
  * Export Job DTO
@@ -52,4 +52,12 @@ export interface ExportConfigDTO {
   };
   format: ExportFormat;
   includeReferences: boolean;
+}
+
+/**
+ * Resource Count DTO
+ */
+export interface ResourceCountDTO {
+  resourceType: string;
+  count: number;
 }

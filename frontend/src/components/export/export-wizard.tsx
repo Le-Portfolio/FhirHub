@@ -14,13 +14,14 @@ import {
 interface ExportWizardProps {
   onComplete: (config: ExportConfig) => void;
   onCancel: () => void;
+  resourceCounts?: Record<string, number>;
   className?: string;
 }
 
 export interface ExportConfig {
   resourceTypes: string[];
   dateRange: { start: string; end: string } | null;
-  format: "ndjson" | "json" | "csv";
+  format: "ndjson" | "json";
   includeReferences: boolean;
 }
 
@@ -38,6 +39,7 @@ const steps = [
 export function ExportWizard({
   onComplete,
   onCancel,
+  resourceCounts,
   className,
 }: ExportWizardProps) {
   const [currentStep, setCurrentStep] = useState(1);
@@ -138,6 +140,7 @@ export function ExportWizard({
             onChange={(resourceTypes) =>
               setConfig({ ...config, resourceTypes })
             }
+            resourceCounts={resourceCounts}
           />
         )}
         {currentStep === 2 && (
@@ -156,7 +159,9 @@ export function ExportWizard({
             }
           />
         )}
-        {currentStep === 4 && <ReviewStep config={config} />}
+        {currentStep === 4 && (
+          <ReviewStep config={config} resourceCounts={resourceCounts} />
+        )}
       </div>
 
       {/* Actions */}
@@ -194,6 +199,7 @@ export function ExportWizard({
 interface ResourceTypeStepProps {
   selected: string[];
   onChange: (selected: string[]) => void;
+  resourceCounts?: Record<string, number>;
 }
 
 const resourceTypes = [
@@ -201,65 +207,59 @@ const resourceTypes = [
     id: "Patient",
     label: "Patients",
     description: "Patient demographics and identifiers",
-    count: 1234,
   },
   {
     id: "Observation",
     label: "Observations",
     description: "Vital signs, lab results, assessments",
-    count: 45678,
   },
   {
     id: "Condition",
     label: "Conditions",
     description: "Diagnoses and health conditions",
-    count: 8901,
   },
   {
     id: "MedicationRequest",
     label: "Medications",
     description: "Medication orders and prescriptions",
-    count: 12345,
   },
   {
     id: "DiagnosticReport",
     label: "Diagnostic Reports",
     description: "Lab reports and imaging results",
-    count: 5678,
   },
   {
     id: "Encounter",
     label: "Encounters",
     description: "Patient visits and admissions",
-    count: 3456,
   },
   {
     id: "Procedure",
     label: "Procedures",
     description: "Clinical procedures performed",
-    count: 2345,
   },
   {
     id: "Immunization",
     label: "Immunizations",
     description: "Vaccination records",
-    count: 6789,
   },
   {
     id: "AllergyIntolerance",
     label: "Allergies",
     description: "Allergy and intolerance records",
-    count: 890,
   },
   {
     id: "DocumentReference",
     label: "Documents",
     description: "Clinical documents and attachments",
-    count: 4567,
   },
 ];
 
-function ResourceTypeStep({ selected, onChange }: ResourceTypeStepProps) {
+function ResourceTypeStep({
+  selected,
+  onChange,
+  resourceCounts,
+}: ResourceTypeStepProps) {
   const toggleResource = (id: string) => {
     if (selected.includes(id)) {
       onChange(selected.filter((r) => r !== id));
@@ -296,35 +296,40 @@ function ResourceTypeStep({ selected, onChange }: ResourceTypeStepProps) {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        {resourceTypes.map((resource) => (
-          <label
-            key={resource.id}
-            className={cn(
-              "flex items-start gap-3 p-4 rounded-lg border-2 cursor-pointer transition-colors",
-              selected.includes(resource.id)
-                ? "border-primary bg-primary/5"
-                : "border-base-200 hover:border-base-300"
-            )}
-          >
-            <input
-              type="checkbox"
-              className="checkbox checkbox-primary mt-0.5"
-              checked={selected.includes(resource.id)}
-              onChange={() => toggleResource(resource.id)}
-            />
-            <div className="flex-1">
-              <div className="flex items-center justify-between">
-                <span className="font-medium">{resource.label}</span>
-                <span className="text-xs text-base-content/50">
-                  {resource.count.toLocaleString()} records
-                </span>
+        {resourceTypes.map((resource) => {
+          const count = resourceCounts?.[resource.id];
+          return (
+            <label
+              key={resource.id}
+              className={cn(
+                "flex items-start gap-3 p-4 rounded-lg border-2 cursor-pointer transition-colors",
+                selected.includes(resource.id)
+                  ? "border-primary bg-primary/5"
+                  : "border-base-200 hover:border-base-300"
+              )}
+            >
+              <input
+                type="checkbox"
+                className="checkbox checkbox-primary mt-0.5"
+                checked={selected.includes(resource.id)}
+                onChange={() => toggleResource(resource.id)}
+              />
+              <div className="flex-1">
+                <div className="flex items-center justify-between">
+                  <span className="font-medium">{resource.label}</span>
+                  <span className="text-xs text-base-content/50">
+                    {count != null
+                      ? `${count.toLocaleString()} records`
+                      : "\u2014"}
+                  </span>
+                </div>
+                <p className="text-sm text-base-content/60">
+                  {resource.description}
+                </p>
               </div>
-              <p className="text-sm text-base-content/60">
-                {resource.description}
-              </p>
-            </div>
-          </label>
-        ))}
+            </label>
+          );
+        })}
       </div>
 
       {selected.length > 0 && (
@@ -447,9 +452,9 @@ function DateRangeStep({ dateRange, onChange }: DateRangeStepProps) {
 
 // Step 3: Options
 interface OptionsStepProps {
-  format: "ndjson" | "json" | "csv";
+  format: "ndjson" | "json";
   includeReferences: boolean;
-  onFormatChange: (format: "ndjson" | "json" | "csv") => void;
+  onFormatChange: (format: "ndjson" | "json") => void;
   onReferencesChange: (include: boolean) => void;
 }
 
@@ -470,12 +475,6 @@ function OptionsStep({
       id: "json" as const,
       label: "JSON Bundle",
       description: "Single FHIR Bundle containing all resources",
-      recommended: false,
-    },
-    {
-      id: "csv" as const,
-      label: "CSV",
-      description: "Comma-separated values (flattened structure)",
       recommended: false,
     },
   ];
@@ -554,11 +553,24 @@ function OptionsStep({
 // Step 4: Review
 interface ReviewStepProps {
   config: ExportConfig;
+  resourceCounts?: Record<string, number>;
 }
 
-function ReviewStep({ config }: ReviewStepProps) {
-  const estimatedSize = config.resourceTypes.length * 50; // Mock estimate in MB
-  const estimatedTime = Math.ceil(estimatedSize / 100); // Mock estimate in minutes
+function ReviewStep({ config, resourceCounts }: ReviewStepProps) {
+  const totalResources = resourceCounts
+    ? config.resourceTypes.reduce(
+        (sum, type) => sum + (resourceCounts[type] ?? 0),
+        0
+      )
+    : null;
+
+  const estimatedSizeKB =
+    totalResources != null ? Math.round(totalResources * 3) : null;
+
+  const formatSize = (kb: number) => {
+    if (kb < 1024) return `${kb} KB`;
+    return `${(kb / 1024).toFixed(1)} MB`;
+  };
 
   return (
     <div className="space-y-6">
@@ -593,9 +605,7 @@ function ReviewStep({ config }: ReviewStepProps) {
           <dd className="mt-1 font-medium">
             {config.format === "ndjson"
               ? "NDJSON (Newline-delimited JSON)"
-              : config.format === "json"
-                ? "JSON Bundle"
-                : "CSV"}
+              : "JSON Bundle"}
           </dd>
         </div>
         <div className="p-4">
@@ -608,10 +618,11 @@ function ReviewStep({ config }: ReviewStepProps) {
 
       <div className="alert alert-info">
         <div>
-          <p className="font-medium">Estimated Export Size</p>
+          <p className="font-medium">Estimated Export</p>
           <p className="text-sm">
-            ~{estimatedSize} MB • Approximately {estimatedTime} minute
-            {estimatedTime !== 1 ? "s" : ""} to complete
+            {totalResources != null && estimatedSizeKB != null
+              ? `~${totalResources.toLocaleString()} resources \u2022 ~${formatSize(estimatedSizeKB)}`
+              : "Size will be calculated after export"}
           </p>
         </div>
       </div>

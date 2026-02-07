@@ -152,6 +152,70 @@ export class ApiClient {
   async delete(path: string): Promise<void> {
     return this.request<void>("DELETE", path);
   }
+
+  async getBlob(path: string): Promise<Blob> {
+    const url = `${this.baseUrl}${path}`;
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), this.timeout);
+
+    try {
+      const headers: Record<string, string> = {};
+
+      const token = this.getAccessToken?.();
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+
+      const response = await fetch(url, {
+        method: "GET",
+        headers,
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const errorBody = await response.text();
+        const errorCode = this.mapStatusToErrorCode(response.status);
+        throw new ApiException(
+          errorCode,
+          errorBody || response.statusText,
+          response.status
+        );
+      }
+
+      return await response.blob();
+    } catch (error) {
+      clearTimeout(timeoutId);
+
+      if (error instanceof ApiException) {
+        throw error;
+      }
+
+      if (error instanceof Error) {
+        if (error.name === "AbortError") {
+          throw new ApiException(
+            API_ERROR_CODES.TIMEOUT,
+            "Request timed out",
+            408
+          );
+        }
+
+        throw new ApiException(
+          API_ERROR_CODES.NETWORK_ERROR,
+          error.message || "Network error occurred",
+          0
+        );
+      }
+
+      throw new ApiException(
+        API_ERROR_CODES.INTERNAL_ERROR,
+        "An unexpected error occurred",
+        500
+      );
+    }
+  }
 }
 
 // Default API base URL from environment

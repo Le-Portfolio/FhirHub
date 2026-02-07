@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { PageContainer, PageHeader } from "@/components/layout/app-layout";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,15 +15,48 @@ import {
   RefreshCw,
 } from "@/components/ui/icons";
 import { useExportJobs } from "@/hooks";
+import { useExportService } from "@/services";
 import { Skeleton, ListItemSkeleton } from "@/components/ui/loading-skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import type { ExportConfigDTO } from "@/types";
 
 export default function ExportPage() {
   const [showWizard, setShowWizard] = useState(false);
+  const [resourceCounts, setResourceCounts] = useState<
+    Record<string, number> | undefined
+  >(undefined);
 
-  const { jobs, loading, error, refetch, createJob, retryJob, deleteJob } =
-    useExportJobs();
+  const exportService = useExportService();
+
+  const {
+    jobs,
+    loading,
+    error,
+    refetch,
+    createJob,
+    retryJob,
+    deleteJob,
+    downloadJob,
+  } = useExportJobs();
+
+  const fetchResourceCounts = useCallback(async () => {
+    try {
+      const counts = await exportService.getResourceCounts();
+      const map: Record<string, number> = {};
+      for (const c of counts) {
+        map[c.resourceType] = c.count;
+      }
+      setResourceCounts(map);
+    } catch {
+      // Counts are non-critical; wizard will show "—" if unavailable
+    }
+  }, [exportService]);
+
+  useEffect(() => {
+    if (showWizard && resourceCounts === undefined) {
+      fetchResourceCounts();
+    }
+  }, [showWizard, resourceCounts, fetchResourceCounts]);
 
   const handleExportComplete = async (config: ExportConfig) => {
     const exportConfig: ExportConfigDTO = {
@@ -37,10 +70,8 @@ export default function ExportPage() {
     setShowWizard(false);
   };
 
-  const handleDownload = (job: { id: string }) => {
-    // In a real app, this would trigger a download
-    console.warn("Downloading export:", job.id);
-    alert(`Download started for export ${job.id.slice(0, 8)}`);
+  const handleDownload = async (job: { id: string }) => {
+    await downloadJob(job.id);
   };
 
   const handleRetry = async (job: { id: string }) => {
@@ -130,6 +161,7 @@ export default function ExportPage() {
           <ExportWizard
             onComplete={handleExportComplete}
             onCancel={() => setShowWizard(false)}
+            resourceCounts={resourceCounts}
           />
         )}
 

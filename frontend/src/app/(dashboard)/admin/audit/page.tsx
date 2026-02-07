@@ -2,12 +2,21 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { PageContainer, PageHeader } from "@/components/layout/app-layout";
-import { RefreshCw, Search } from "@/components/ui/icons";
+import { RefreshCw } from "@/components/ui/icons";
 import { useUserManagementService } from "@/services";
 import { AuditLogTable } from "@/components/admin/audit-log-table";
 import { getDemoUserEvents, getDemoAdminEvents } from "@/lib/demo-data";
+import { TabNav } from "@/components/ui/tab-nav";
+import { SearchInput } from "@/components/forms/search-input";
+import { FilterBar } from "@/components/forms/filter-bar";
+import { Pagination } from "@/components/common/data-table";
 
 type TabType = "user" | "admin";
+
+const auditTabs: { id: TabType; label: string }[] = [
+  { id: "user", label: "User Events" },
+  { id: "admin", label: "Admin Events" },
+];
 
 export default function AuditPage() {
   const [tab, setTab] = useState<TabType>("user");
@@ -55,34 +64,26 @@ export default function AuditPage() {
       <PageHeader title="Audit Logs" description="View authentication and admin activity events" />
 
       {/* Tabs */}
-      <div className="tabs tabs-boxed mb-6 w-fit">
-        <button
-          className={`tab ${tab === "user" ? "tab-active" : ""}`}
-          onClick={() => { setTab("user"); setPage(1); }}
-        >
-          User Events
-        </button>
-        <button
-          className={`tab ${tab === "admin" ? "tab-active" : ""}`}
-          onClick={() => { setTab("admin"); setPage(1); }}
-        >
-          Admin Events
-        </button>
+      <div className="animate-fade-in-up">
+        <TabNav
+          tabs={auditTabs}
+          activeTab={tab}
+          onTabChange={(t) => { setTab(t); setPage(1); }}
+          variant="boxed"
+          className="mb-6"
+        />
       </div>
 
       {/* Filters */}
       {tab === "user" && (
-        <div className="flex items-center gap-3 mb-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-base-content/40" />
-            <input
-              type="text"
-              placeholder="Filter by user ID..."
-              value={userIdFilter}
-              onChange={(e) => { setUserIdFilter(e.target.value); setPage(1); }}
-              className="input input-bordered input-sm pl-10 w-64"
-            />
-          </div>
+        <FilterBar className="animate-fade-in-up">
+          <SearchInput
+            value={userIdFilter}
+            onChange={(v) => { setUserIdFilter(v); setPage(1); }}
+            placeholder="Filter by user ID..."
+            size="sm"
+            className="w-64"
+          />
           <select
             value={typeFilter}
             onChange={(e) => { setTypeFilter(e.target.value); setPage(1); }}
@@ -103,29 +104,20 @@ export default function AuditPage() {
           >
             <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
           </button>
-        </div>
+        </FilterBar>
       )}
 
       <AuditLogTable events={events} loading={loading} tab={tab} />
 
       {/* Pagination */}
-      <div className="flex justify-center gap-2 mt-6">
-        <button
-          className="btn btn-sm btn-outline"
-          disabled={page <= 1}
-          onClick={() => setPage((p) => p - 1)}
-        >
-          Previous
-        </button>
-        <span className="btn btn-sm btn-ghost">Page {page}</span>
-        <button
-          className="btn btn-sm btn-outline"
-          disabled={events.length < pageSize}
-          onClick={() => setPage((p) => p + 1)}
-        >
-          Next
-        </button>
-      </div>
+      <Pagination
+        currentPage={page}
+        totalPages={events.length < pageSize ? page : page + 1}
+        totalItems={0}
+        pageSize={pageSize}
+        onPageChange={setPage}
+        className="mt-6"
+      />
     </PageContainer>
   );
 }

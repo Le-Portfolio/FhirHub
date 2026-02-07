@@ -4,11 +4,15 @@ import { useState, useCallback } from "react";
 import Link from "next/link";
 import { PageContainer, PageHeader } from "@/components/layout/app-layout";
 import { Pagination } from "@/components/common/data-table";
-import { Bell, Search, AlertTriangle, RefreshCw, CheckCircle, Check } from "@/components/ui/icons";
+import { Bell, CheckCircle, Check } from "@/components/ui/icons";
 import { useAllAlerts } from "@/hooks";
 import { useToast } from "@/components/ui/toast";
 import { TableSkeleton } from "@/components/ui/loading-skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
+import { ErrorState } from "@/components/ui/error-state";
+import { LoadingOverlay } from "@/components/ui/loading-overlay";
+import { SearchInput } from "@/components/forms/search-input";
+import { FilterBar } from "@/components/forms/filter-bar";
 
 const priorityColors: Record<string, string> = {
   critical: "badge-error",
@@ -69,14 +73,11 @@ export default function AlertsPage() {
     return (
       <PageContainer>
         <PageHeader title="Alerts" description="All system alerts" icon={Bell} />
-        <div className="flex flex-col items-center justify-center py-12">
-          <AlertTriangle className="w-12 h-12 text-error mb-4" />
-          <h3 className="text-lg font-semibold mb-2">Failed to load alerts</h3>
-          <p className="text-base-content/60 mb-4">{error.message}</p>
-          <button onClick={() => refetch()} className="btn btn-primary gap-2">
-            <RefreshCw className="w-4 h-4" /> Try Again
-          </button>
-        </div>
+        <ErrorState
+          title="Failed to load alerts"
+          message={error.message}
+          onRetry={() => refetch()}
+        />
       </PageContainer>
     );
   }
@@ -86,17 +87,13 @@ export default function AlertsPage() {
       <PageHeader title="Alerts" description="All system alerts and notifications" icon={Bell} />
 
       {/* Search and filters */}
-      <div className="flex flex-col sm:flex-row gap-3 mb-6">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-base-content/40" />
-          <input
-            type="text"
-            placeholder="Search by patient name..."
-            value={query}
-            onChange={(e) => handleSearch(e.target.value)}
-            className="input input-bordered w-full pl-10"
-          />
-        </div>
+      <FilterBar className="animate-fade-in-up">
+        <SearchInput
+          value={query}
+          onChange={handleSearch}
+          placeholder="Search by patient name..."
+          className="flex-1"
+        />
         <select
           value={priority}
           onChange={(e) => { setPriority(e.target.value); setCurrentPage(1); }}
@@ -118,10 +115,10 @@ export default function AlertsPage() {
           <option value="acknowledged">Acknowledged</option>
           <option value="resolved">Resolved</option>
         </select>
-      </div>
+      </FilterBar>
 
       {/* Alerts list */}
-      <div className={loading ? "opacity-50 pointer-events-none" : ""}>
+      <LoadingOverlay loading={loading}>
         {loading && alerts.length === 0 ? (
           <TableSkeleton rows={8} columns={6} />
         ) : alerts.length === 0 ? (
@@ -183,7 +180,7 @@ export default function AlertsPage() {
             ))}
           </div>
         )}
-      </div>
+      </LoadingOverlay>
 
       {total > pageSize && (
         <Pagination

@@ -16,6 +16,8 @@ import { useUser } from "@/hooks/useUser";
 import { useUserMutations } from "@/hooks/useUserMutations";
 import { UserRoleEditor } from "@/components/admin/user-role-editor";
 import { UserSessionsPanel } from "@/components/admin/user-sessions-panel";
+import { ErrorState } from "@/components/ui/error-state";
+import { PageCard } from "@/components/ui/page-card";
 import Link from "next/link";
 
 export default function UserDetailPage() {
@@ -84,11 +86,13 @@ export default function UserDetailPage() {
   if (error || !user) {
     return (
       <PageContainer>
-        <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4">
-          <ShieldAlert className="w-16 h-16 text-error/50" />
-          <p className="text-base-content/60">
-            {error?.message ?? "User not found"}
-          </p>
+        <ErrorState
+          size="lg"
+          title="User not found"
+          message={error?.message ?? "The requested user could not be found"}
+          icon={ShieldAlert}
+        />
+        <div className="text-center">
           <Link href="/admin/users" className="btn btn-sm btn-primary">
             Back to Users
           </Link>
@@ -104,6 +108,11 @@ export default function UserDetailPage() {
       <PageHeader
         title={`${user.firstName} ${user.lastName}`}
         description={user.email}
+        breadcrumbs={[
+          { label: "Admin", href: "/admin/users" },
+          { label: "Users", href: "/admin/users" },
+          { label: `${user.firstName} ${user.lastName}` },
+        ]}
         actions={
           <Link href="/admin/users" className="btn btn-ghost btn-sm gap-2">
             <ArrowLeft className="w-4 h-4" />
@@ -112,12 +121,10 @@ export default function UserDetailPage() {
         }
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in-up">
         {/* Profile Section */}
         <div className="lg:col-span-2 space-y-6">
-          <div className="card bg-base-100 border border-base-200">
-            <div className="card-body">
-              <h3 className="card-title text-base">Profile Information</h3>
+          <PageCard title="Profile Information">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
                 <div className="form-control">
                   <label className="label">
@@ -153,7 +160,7 @@ export default function UserDetailPage() {
                   />
                 </div>
               </div>
-              <div className="card-actions justify-end mt-4">
+              <div className="flex justify-end mt-4">
                 <button
                   onClick={handleSaveProfile}
                   disabled={mutations.loading}
@@ -163,32 +170,23 @@ export default function UserDetailPage() {
                   Save Changes
                 </button>
               </div>
-            </div>
-          </div>
+          </PageCard>
 
           {/* Roles */}
-          <div className="card bg-base-100 border border-base-200">
-            <div className="card-body">
-              <h3 className="card-title text-base">Roles</h3>
+          <PageCard title="Roles">
               <UserRoleEditor userId={user.id} currentRoles={user.roles} onUpdate={refetch} />
-            </div>
-          </div>
+          </PageCard>
 
           {/* Sessions */}
-          <div className="card bg-base-100 border border-base-200">
-            <div className="card-body">
-              <h3 className="card-title text-base">Active Sessions</h3>
+          <PageCard title="Active Sessions">
               <UserSessionsPanel userId={user.id} />
-            </div>
-          </div>
+          </PageCard>
         </div>
 
         {/* Sidebar Actions */}
         <div className="space-y-6">
           {/* Status */}
-          <div className="card bg-base-100 border border-base-200">
-            <div className="card-body">
-              <h3 className="card-title text-base">Account Status</h3>
+          <PageCard title="Account Status">
               <div className="flex items-center gap-2 mt-2">
                 {user.enabled ? (
                   <span className="badge badge-success gap-1">
@@ -221,13 +219,10 @@ export default function UserDetailPage() {
                   {new Date(user.createdTimestamp).toLocaleDateString()}
                 </p>
               )}
-            </div>
-          </div>
+          </PageCard>
 
           {/* Quick Actions */}
-          <div className="card bg-base-100 border border-base-200">
-            <div className="card-body">
-              <h3 className="card-title text-base">Actions</h3>
+          <PageCard title="Actions">
               <div className="flex flex-col gap-2 mt-2">
                 <button
                   onClick={handleToggleActive}
@@ -266,8 +261,7 @@ export default function UserDetailPage() {
               {mutations.error && (
                 <p className="text-error text-xs mt-2">{mutations.error.message}</p>
               )}
-            </div>
-          </div>
+          </PageCard>
         </div>
       </div>
     </PageContainer>

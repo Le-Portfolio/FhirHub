@@ -75,11 +75,18 @@ export function PageContainer({
   );
 }
 
+interface BreadcrumbItem {
+  label: string;
+  href?: string;
+}
+
 interface PageHeaderProps {
   title: string;
   description?: string;
   icon?: React.ComponentType<{ className?: string }>;
   actions?: React.ReactNode;
+  breadcrumbs?: BreadcrumbItem[];
+  badge?: React.ReactNode;
   className?: string;
 }
 
@@ -88,12 +95,14 @@ export function PageHeader({
   description,
   icon: Icon,
   actions,
+  breadcrumbs,
+  badge,
   className,
 }: PageHeaderProps) {
   return (
     <div
       className={cn(
-        "flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6",
+        "flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 animate-fade-in-up",
         className
       )}
     >
@@ -104,7 +113,29 @@ export function PageHeader({
           </div>
         )}
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
+          {breadcrumbs && breadcrumbs.length > 0 && (
+            <nav className="text-sm text-base-content/50 mb-1 flex items-center gap-1">
+              {breadcrumbs.map((crumb, i) => (
+                <span key={i} className="flex items-center gap-1">
+                  {i > 0 && <span className="mx-1">/</span>}
+                  {crumb.href ? (
+                    <a
+                      href={crumb.href}
+                      className="hover:text-primary transition-colors"
+                    >
+                      {crumb.label}
+                    </a>
+                  ) : (
+                    <span>{crumb.label}</span>
+                  )}
+                </span>
+              ))}
+            </nav>
+          )}
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
+            {badge}
+          </div>
           {description && (
             <p className="text-base-content/60 mt-1">{description}</p>
           )}

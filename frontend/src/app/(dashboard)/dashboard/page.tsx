@@ -59,14 +59,18 @@ export default function DashboardPage() {
           ))}
         </div>
       ) : (
-        <MetricsRow metrics={metrics} className="mb-6" />
+        <div className="animate-fade-in-up">
+          <MetricsRow metrics={metrics} className="mb-6" />
+        </div>
       )}
 
       {/* Quick Actions */}
-      <QuickActions className="mb-6" />
+      <div className="animate-fade-in-up animate-stagger-1">
+        <QuickActions className="mb-6" />
+      </div>
 
       {/* Main content grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in-up animate-stagger-2">
         {/* Left column: Alerts + Activity */}
         <div className="lg:col-span-2 space-y-6">
           {loading ? (

@@ -16,3 +16,4 @@ export * from "./useAllConditions";
 export * from "./useAllMedications";
 export * from "./useAllAlerts";
 export * from "./useAllActivities";
+export * from "./useLocalStorage";

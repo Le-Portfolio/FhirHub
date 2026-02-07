@@ -2,7 +2,7 @@
 @plugin "daisyui" {
   themes:
     light --default,
-    dark --prefersdark,
+    dark,
     fhirhub;
 }
 
@@ -62,19 +62,17 @@
   --radius-badge: 0.375rem;
 }
 
-/* Dark mode overrides */
-@media (prefers-color-scheme: dark) {
-  @theme {
-    --color-base-100: #1f2937;
-    --color-base-200: #111827;
-    --color-base-300: #0f172a;
-    --color-base-content: #f9fafb;
+/* Dark mode overrides — applied via DaisyUI data-theme="dark" */
+[data-theme="dark"] {
+  --color-base-100: #1f2937;
+  --color-base-200: #111827;
+  --color-base-300: #0f172a;
+  --color-base-content: #f9fafb;
 
-    --color-critical-light: #7f1d1d;
-    --color-resolved-light: #064e3b;
-    --color-pending-light: #78350f;
-    --color-active-light: #134e4a;
-  }
+  --color-critical-light: #7f1d1d;
+  --color-resolved-light: #064e3b;
+  --color-pending-light: #78350f;
+  --color-active-light: #134e4a;
 }
 
 /* CSS Variables for consistent theming */
@@ -171,3 +169,9 @@ body {
 .animation-delay-100 { animation-delay: 100ms; }
 .animation-delay-200 { animation-delay: 200ms; }
 .animation-delay-300 { animation-delay: 300ms; }
+
+/* Dashboard stagger utilities */
+.animate-stagger-1 { animation-delay: 50ms; }
+.animate-stagger-2 { animation-delay: 100ms; }
+.animate-stagger-3 { animation-delay: 150ms; }
+.animate-stagger-4 { animation-delay: 200ms; }

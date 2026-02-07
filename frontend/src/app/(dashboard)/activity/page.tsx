@@ -3,10 +3,13 @@
 import { useState, useCallback } from "react";
 import { PageContainer, PageHeader } from "@/components/layout/app-layout";
 import { Pagination } from "@/components/common/data-table";
-import { History, Search, AlertTriangle, RefreshCw } from "@/components/ui/icons";
+import { History } from "@/components/ui/icons";
 import { useAllActivities } from "@/hooks";
 import { TableSkeleton } from "@/components/ui/loading-skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
+import { ErrorState } from "@/components/ui/error-state";
+import { LoadingOverlay } from "@/components/ui/loading-overlay";
+import { FilterBar } from "@/components/forms/filter-bar";
 
 const typeIcons: Record<string, string> = {
   create: "bg-success/10 text-success",
@@ -34,14 +37,11 @@ export default function ActivityPage() {
     return (
       <PageContainer>
         <PageHeader title="Activity" description="System activity log" icon={History} />
-        <div className="flex flex-col items-center justify-center py-12">
-          <AlertTriangle className="w-12 h-12 text-error mb-4" />
-          <h3 className="text-lg font-semibold mb-2">Failed to load activities</h3>
-          <p className="text-base-content/60 mb-4">{error.message}</p>
-          <button onClick={() => refetch()} className="btn btn-primary gap-2">
-            <RefreshCw className="w-4 h-4" /> Try Again
-          </button>
-        </div>
+        <ErrorState
+          title="Failed to load activities"
+          message={error.message}
+          onRetry={() => refetch()}
+        />
       </PageContainer>
     );
   }
@@ -51,7 +51,7 @@ export default function ActivityPage() {
       <PageHeader title="Activity" description="System activity log" icon={History} />
 
       {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-3 mb-6">
+      <FilterBar className="animate-fade-in-up">
         <select
           value={typeFilter}
           onChange={(e) => { setTypeFilter(e.target.value); setCurrentPage(1); }}
@@ -76,10 +76,10 @@ export default function ActivityPage() {
           <option value="MedicationRequest">MedicationRequest</option>
           <option value="Encounter">Encounter</option>
         </select>
-      </div>
+      </FilterBar>
 
       {/* Activities */}
-      <div className={loading ? "opacity-50 pointer-events-none" : ""}>
+      <LoadingOverlay loading={loading}>
         {loading && activities.length === 0 ? (
           <TableSkeleton rows={8} columns={5} />
         ) : activities.length === 0 ? (
@@ -112,7 +112,7 @@ export default function ActivityPage() {
             ))}
           </div>
         )}
-      </div>
+      </LoadingOverlay>
 
       {total > pageSize && (
         <Pagination

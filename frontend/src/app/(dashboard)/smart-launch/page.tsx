@@ -264,7 +264,7 @@ export default function SmartLaunchPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-fade-in-up">
         {/* Left Column - Launch & Token */}
         <div className="space-y-6">
           <LaunchSimulator onLaunch={handleLaunch} isLaunching={isLaunching} />

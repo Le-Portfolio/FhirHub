@@ -137,7 +137,7 @@ export default function NewPatientPage() {
         }
       />
 
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} className="animate-fade-in-up">
         <div className="card bg-base-100 shadow-sm">
           <div className="card-body space-y-6">
             {/* Name */}

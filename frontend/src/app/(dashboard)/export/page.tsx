@@ -11,13 +11,14 @@ import { ExportJobList } from "@/components/export/export-job-list";
 import {
   Plus,
   FileArchive,
-  AlertTriangle,
-  RefreshCw,
 } from "@/components/ui/icons";
 import { useExportJobs } from "@/hooks";
 import { useExportService } from "@/services";
 import { Skeleton, ListItemSkeleton } from "@/components/ui/loading-skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
+import { ErrorState } from "@/components/ui/error-state";
+import { LoadingOverlay } from "@/components/ui/loading-overlay";
+import { SectionHeader } from "@/components/layout/app-layout";
 import type { ExportConfigDTO } from "@/types";
 
 export default function ExportPage() {
@@ -91,19 +92,11 @@ export default function ExportPage() {
           description="Export FHIR resources in bulk for analysis or backup"
           icon={FileArchive}
         />
-        <div className="flex flex-col items-center justify-center py-12">
-          <div className="text-error mb-4">
-            <AlertTriangle className="w-12 h-12" />
-          </div>
-          <h3 className="text-lg font-semibold mb-2">
-            Failed to load export jobs
-          </h3>
-          <p className="text-base-content/60 mb-4">{error.message}</p>
-          <button onClick={() => refetch()} className="btn btn-primary gap-2">
-            <RefreshCw className="w-4 h-4" />
-            Try Again
-          </button>
-        </div>
+        <ErrorState
+          title="Failed to load export jobs"
+          message={error.message}
+          onRetry={() => refetch()}
+        />
       </PageContainer>
     );
   }
@@ -155,7 +148,7 @@ export default function ExportPage() {
         }
       />
 
-      <div className="space-y-8">
+      <div className="space-y-8 animate-fade-in-up">
         {/* Export Wizard */}
         {showWizard && (
           <ExportWizard
@@ -167,7 +160,7 @@ export default function ExportPage() {
 
         {/* Export Jobs */}
         <section>
-          <h2 className="text-lg font-semibold mb-4">Export History</h2>
+          <SectionHeader title="Export History" />
           {jobs.length === 0 ? (
             <EmptyState
               title="No exports yet"
@@ -180,14 +173,14 @@ export default function ExportPage() {
               }
             />
           ) : (
-            <div className={loading ? "opacity-50 pointer-events-none" : ""}>
+            <LoadingOverlay loading={loading}>
               <ExportJobList
                 jobs={jobs}
                 onDownload={handleDownload}
                 onRetry={handleRetry}
                 onDelete={handleDelete}
               />
-            </div>
+            </LoadingOverlay>
           )}
         </section>
       </div>

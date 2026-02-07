@@ -2,10 +2,12 @@
 
 import { useState, useCallback } from "react";
 import { PageContainer, PageHeader } from "@/components/layout/app-layout";
-import { UserPlus, Search, RefreshCw } from "@/components/ui/icons";
+import { UserPlus, RefreshCw } from "@/components/ui/icons";
 import { useUsers } from "@/hooks/useUsers";
 import { UserTable } from "@/components/admin/user-table";
 import { InviteUserModal } from "@/components/admin/invite-user-modal";
+import { SearchInput } from "@/components/forms/search-input";
+import { FilterBar } from "@/components/forms/filter-bar";
 
 export default function UsersPage() {
   const [search, setSearch] = useState("");
@@ -56,17 +58,14 @@ export default function UsersPage() {
       />
 
       {/* Search */}
-      <div className="flex items-center gap-3 mb-6">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-base-content/40" />
-          <input
-            type="text"
-            placeholder="Search users by name or email..."
-            value={search}
-            onChange={(e) => handleSearch(e.target.value)}
-            className="input input-bordered input-sm w-full pl-10"
-          />
-        </div>
+      <FilterBar className="animate-fade-in-up">
+        <SearchInput
+          value={search}
+          onChange={handleSearch}
+          placeholder="Search users by name or email..."
+          size="sm"
+          className="flex-1 max-w-md"
+        />
         <button
           onClick={() => refetch()}
           className="btn btn-ghost btn-sm btn-square"
@@ -74,7 +73,7 @@ export default function UsersPage() {
         >
           <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
         </button>
-      </div>
+      </FilterBar>
 
       {/* Error state */}
       {error && (

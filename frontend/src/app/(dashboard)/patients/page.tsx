@@ -11,7 +11,7 @@ import {
   PatientTable,
   ViewToggle,
 } from "@/components/patients";
-import { UserPlus, AlertTriangle, RefreshCw } from "@/components/ui/icons";
+import { UserPlus } from "@/components/ui/icons";
 import { usePatients } from "@/hooks";
 import {
   PatientListSkeleton,
@@ -19,6 +19,8 @@ import {
   TableSkeleton,
 } from "@/components/ui/loading-skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
+import { ErrorState } from "@/components/ui/error-state";
+import { LoadingOverlay } from "@/components/ui/loading-overlay";
 
 export default function PatientsPage() {
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
@@ -80,19 +82,11 @@ export default function PatientsPage() {
             </Link>
           }
         />
-        <div className="flex flex-col items-center justify-center py-12">
-          <div className="text-error mb-4">
-            <AlertTriangle className="w-12 h-12" />
-          </div>
-          <h3 className="text-lg font-semibold mb-2">
-            Failed to load patients
-          </h3>
-          <p className="text-base-content/60 mb-4">{error.message}</p>
-          <button onClick={() => refetch()} className="btn btn-primary gap-2">
-            <RefreshCw className="w-4 h-4" />
-            Try Again
-          </button>
-        </div>
+        <ErrorState
+          title="Failed to load patients"
+          message={error.message}
+          onRetry={() => refetch()}
+        />
       </PageContainer>
     );
   }
@@ -130,7 +124,7 @@ export default function PatientsPage() {
       />
 
       {/* Search and filters */}
-      <div className="space-y-4 mb-6">
+      <div className="space-y-4 mb-6 animate-fade-in-up">
         <PatientSearch
           filters={filters}
           onFiltersChange={handleFiltersChange}
@@ -145,7 +139,7 @@ export default function PatientsPage() {
       </div>
 
       {/* Loading overlay for subsequent fetches */}
-      <div className={loading ? "opacity-50 pointer-events-none" : ""}>
+      <LoadingOverlay loading={loading}>
         {/* Results */}
         {patients.length === 0 ? (
           <EmptyState
@@ -190,7 +184,7 @@ export default function PatientsPage() {
         ) : (
           <PatientTable patients={patients} />
         )}
-      </div>
+      </LoadingOverlay>
 
       {/* Pagination */}
       {total > pageSize && (

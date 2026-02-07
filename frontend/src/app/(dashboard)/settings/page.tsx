@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { PageContainer, PageHeader } from "@/components/layout/app-layout";
+import { useState } from "react";
+import { PageContainer, PageHeader, SectionHeader } from "@/components/layout/app-layout";
 import {
   Settings,
   User,
@@ -16,34 +16,20 @@ import {
   Check,
 } from "@/components/ui/icons";
 import { useAuth } from "@/providers/auth-provider";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { useTheme } from "@/providers/theme-provider";
+import { TabNav } from "@/components/ui/tab-nav";
+import { PageCard } from "@/components/ui/page-card";
 
 type SettingsTab = "profile" | "appearance" | "notifications" | "security" | "fhir";
 
-const tabs: { id: SettingsTab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+const settingsTabs: { id: SettingsTab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { id: "profile", label: "Profile", icon: User },
   { id: "appearance", label: "Appearance", icon: Settings },
   { id: "notifications", label: "Notifications", icon: Bell },
   { id: "security", label: "Security", icon: ShieldCheck },
   { id: "fhir", label: "FHIR Settings", icon: Database },
 ];
-
-function useLocalStorage<T>(key: string, defaultValue: T): [T, (value: T) => void] {
-  const [value, setValue] = useState<T>(defaultValue);
-
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem(key);
-      if (stored !== null) setValue(JSON.parse(stored));
-    } catch { /* ignore */ }
-  }, [key]);
-
-  const setAndPersist = (newValue: T) => {
-    setValue(newValue);
-    localStorage.setItem(key, JSON.stringify(newValue));
-  };
-
-  return [value, setAndPersist];
-}
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<SettingsTab>("profile");
@@ -57,33 +43,26 @@ export default function SettingsPage() {
         icon={Settings}
       />
 
-      <div className="flex flex-col lg:flex-row gap-6">
+      <div className="flex flex-col lg:flex-row gap-6 animate-fade-in-up">
         {/* Tab navigation */}
         <div className="lg:w-56 shrink-0">
-          <ul className="menu bg-base-100 rounded-box border border-base-200 w-full">
-            {tabs.map((tab) => (
-              <li key={tab.id}>
-                <button
-                  className={activeTab === tab.id ? "active" : ""}
-                  onClick={() => setActiveTab(tab.id)}
-                >
-                  <tab.icon className="w-4 h-4" />
-                  {tab.label}
-                </button>
-              </li>
-            ))}
-          </ul>
+          <TabNav
+            tabs={settingsTabs}
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+            variant="vertical"
+          />
         </div>
 
         {/* Tab content */}
         <div className="flex-1 min-w-0">
-          <div className="bg-base-100 rounded-box border border-base-200 p-6">
+          <PageCard>
             {activeTab === "profile" && <ProfileTab user={user} />}
             {activeTab === "appearance" && <AppearanceTab />}
             {activeTab === "notifications" && <NotificationsTab />}
             {activeTab === "security" && <SecurityTab />}
             {activeTab === "fhir" && <FhirSettingsTab />}
-          </div>
+          </PageCard>
         </div>
       </div>
     </PageContainer>
@@ -107,7 +86,7 @@ function ProfileTab({ user }: { user: { id: string; email: string; firstName: st
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Profile Information</h2>
+        <SectionHeader title="Profile Information" className="mb-0" />
         {!isEditing ? (
           <button className="btn btn-sm btn-outline" onClick={() => setIsEditing(true)}>
             Edit
@@ -197,22 +176,22 @@ function ProfileTab({ user }: { user: { id: string; email: string; firstName: st
 // --- Appearance Tab ---
 
 function AppearanceTab() {
-  const [theme, setTheme] = useLocalStorage<string>("fhirhub-theme", "system");
+  const { theme, setTheme } = useTheme();
   const [compactMode, setCompactMode] = useLocalStorage<boolean>("fhirhub-compact", false);
 
   return (
     <div className="space-y-6">
-      <h2 className="text-lg font-semibold">Appearance</h2>
+      <SectionHeader title="Appearance" />
 
       <div className="form-control">
         <label className="label"><span className="label-text font-medium">Theme</span></label>
         <p className="text-sm text-base-content/60 mb-3">Select your preferred color scheme</p>
         <div className="grid grid-cols-3 gap-3">
-          {[
-            { value: "light", label: "Light", desc: "Clean white interface" },
-            { value: "dark", label: "Dark", desc: "Easy on the eyes" },
-            { value: "system", label: "System", desc: "Match OS setting" },
-          ].map((opt) => (
+          {([
+            { value: "light" as const, label: "Light", desc: "Clean white interface" },
+            { value: "dark" as const, label: "Dark", desc: "Easy on the eyes" },
+            { value: "system" as const, label: "System", desc: "Match OS setting" },
+          ]).map((opt) => (
             <button
               key={opt.value}
               onClick={() => setTheme(opt.value)}
@@ -290,7 +269,7 @@ function NotificationsTab() {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-lg font-semibold">Email Notifications</h2>
+      <SectionHeader title="Email Notifications" />
       <p className="text-sm text-base-content/60">Choose which email notifications you&apos;d like to receive</p>
 
       <div className="space-y-4">
@@ -344,7 +323,7 @@ function NotificationsTab() {
 function SecurityTab() {
   return (
     <div className="space-y-6">
-      <h2 className="text-lg font-semibold">Security</h2>
+      <SectionHeader title="Security" />
 
       {/* Password */}
       <div className="p-4 rounded-lg border border-base-200 space-y-3">
@@ -432,12 +411,14 @@ function FhirSettingsTab() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">FHIR Configuration</h2>
-        <button className="btn btn-sm btn-primary" onClick={handleSave}>
-          Save Changes
-        </button>
-      </div>
+      <SectionHeader
+        title="FHIR Configuration"
+        actions={
+          <button className="btn btn-sm btn-primary" onClick={handleSave}>
+            Save Changes
+          </button>
+        }
+      />
 
       {saved && (
         <div className="alert alert-success py-2">

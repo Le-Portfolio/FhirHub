@@ -90,7 +90,7 @@ export default function SmartCallbackPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-base-200 p-4">
-      <div className="bg-base-100 rounded-xl border border-base-200 p-8 max-w-md w-full text-center">
+      <div className="bg-base-100 rounded-xl border border-base-200 p-8 max-w-md w-full text-center animate-fade-in">
         {status === "exchanging" && (
           <>
             <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />

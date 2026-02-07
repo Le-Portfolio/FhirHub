@@ -27,9 +27,9 @@ import {
   Pill,
   TestTube,
   Plus,
-  AlertTriangle,
-  RefreshCw,
 } from "@/components/ui/icons";
+import { ErrorState } from "@/components/ui/error-state";
+import { PageCard } from "@/components/ui/page-card";
 import {
   usePatient,
   useVitals,
@@ -98,20 +98,12 @@ export default function PatientDetailPage() {
   if (patientError && !patientLoading) {
     return (
       <div className="min-h-screen bg-base-200 flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-error mb-4">
-            <AlertTriangle className="w-12 h-12 mx-auto" />
-          </div>
-          <h3 className="text-lg font-semibold mb-2">Failed to load patient</h3>
-          <p className="text-base-content/60 mb-4">{patientError.message}</p>
-          <button
-            onClick={() => refetchPatient()}
-            className="btn btn-primary gap-2"
-          >
-            <RefreshCw className="w-4 h-4" />
-            Try Again
-          </button>
-        </div>
+        <ErrorState
+          size="lg"
+          title="Failed to load patient"
+          message={patientError.message}
+          onRetry={() => refetchPatient()}
+        />
       </div>
     );
   }
@@ -152,7 +144,7 @@ export default function PatientDetailPage() {
       />
       <PatientTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
-      <div className="p-4 md:p-6 lg:p-8 w-full">
+      <div className="p-4 md:p-6 lg:p-8 w-full animate-fade-in-up">
         {/* Only render the active tab to prevent multiple mounts */}
         {activeTab === "overview" && (
           <OverviewTab
@@ -516,14 +508,7 @@ function VitalsTab({
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center py-12">
-        <AlertTriangle className="w-12 h-12 text-error mb-4" />
-        <p className="text-base-content/60 mb-4">{error.message}</p>
-        <button onClick={() => refetch()} className="btn btn-primary gap-2">
-          <RefreshCw className="w-4 h-4" />
-          Try Again
-        </button>
-      </div>
+      <ErrorState size="sm" message={error.message} onRetry={() => refetch()} />
     );
   }
 
@@ -622,14 +607,7 @@ function LabsTab({
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center py-12">
-        <AlertTriangle className="w-12 h-12 text-error mb-4" />
-        <p className="text-base-content/60 mb-4">{error.message}</p>
-        <button onClick={() => refetch()} className="btn btn-primary gap-2">
-          <RefreshCw className="w-4 h-4" />
-          Try Again
-        </button>
-      </div>
+      <ErrorState size="sm" message={error.message} onRetry={() => refetch()} />
     );
   }
 
@@ -692,14 +670,7 @@ function ConditionsTab({
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center py-12">
-        <AlertTriangle className="w-12 h-12 text-error mb-4" />
-        <p className="text-base-content/60 mb-4">{error.message}</p>
-        <button onClick={() => refetch()} className="btn btn-primary gap-2">
-          <RefreshCw className="w-4 h-4" />
-          Try Again
-        </button>
-      </div>
+      <ErrorState size="sm" message={error.message} onRetry={() => refetch()} />
     );
   }
 
@@ -802,14 +773,7 @@ function MedicationsTab({
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center py-12">
-        <AlertTriangle className="w-12 h-12 text-error mb-4" />
-        <p className="text-base-content/60 mb-4">{error.message}</p>
-        <button onClick={() => refetch()} className="btn btn-primary gap-2">
-          <RefreshCw className="w-4 h-4" />
-          Try Again
-        </button>
-      </div>
+      <ErrorState size="sm" message={error.message} onRetry={() => refetch()} />
     );
   }
 
@@ -902,14 +866,7 @@ function TimelineTab({
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center py-12">
-        <AlertTriangle className="w-12 h-12 text-error mb-4" />
-        <p className="text-base-content/60 mb-4">{error.message}</p>
-        <button onClick={() => refetch()} className="btn btn-primary gap-2">
-          <RefreshCw className="w-4 h-4" />
-          Try Again
-        </button>
-      </div>
+      <ErrorState size="sm" message={error.message} onRetry={() => refetch()} />
     );
   }
 

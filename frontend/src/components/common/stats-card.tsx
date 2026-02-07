@@ -20,6 +20,7 @@ interface StatsCardProps {
   className?: string;
   iconColor?: string;
   iconBgColor?: string;
+  style?: React.CSSProperties;
 }
 
 export function StatsCard({
@@ -31,9 +32,10 @@ export function StatsCard({
   className,
   iconColor = "text-primary",
   iconBgColor = "bg-primary/10",
+  style,
 }: StatsCardProps) {
   return (
-    <div className={cn("card bg-base-100 shadow-sm", className)}>
+    <div className={cn("card bg-base-100 shadow-sm card-hover", className)} style={style}>
       <div className="card-body p-4">
         <div className="flex items-start justify-between gap-4">
           {Icon && (

@@ -51,8 +51,8 @@ export function EmptyState({
         className
       )}
     >
-      <div className="rounded-full bg-base-200 p-4 mb-4">
-        <Icon className={cn("text-base-content/50", sizes.icon)} />
+      <div className="rounded-full bg-primary/10 p-4 mb-4">
+        <Icon className={cn("text-primary/60", sizes.icon)} />
       </div>
       <h3 className={cn("font-semibold text-base-content mb-1", sizes.title)}>
         {title}

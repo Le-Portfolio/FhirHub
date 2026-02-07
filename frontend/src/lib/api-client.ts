@@ -47,7 +47,7 @@ export class ApiClient {
       };
 
       const token = this.getAccessToken?.();
-      if (token) {
+      if (this.isLikelyJwt(token)) {
         headers["Authorization"] = `Bearer ${token}`;
       }
 
@@ -163,7 +163,7 @@ export class ApiClient {
       const headers: Record<string, string> = {};
 
       const token = this.getAccessToken?.();
-      if (token) {
+      if (this.isLikelyJwt(token)) {
         headers["Authorization"] = `Bearer ${token}`;
       }
 
@@ -215,6 +215,12 @@ export class ApiClient {
         500
       );
     }
+  }
+
+  private isLikelyJwt(token?: string | null): token is string {
+    if (!token) return false;
+    const parts = token.split(".");
+    return parts.length === 3 && parts.every((part) => part.length > 0);
   }
 }
 

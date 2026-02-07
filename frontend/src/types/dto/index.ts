@@ -59,6 +59,13 @@ export type { TimelineResourceType, TimelineEventDTO } from "./timeline.dto";
 export type {
   DashboardMetricDTO,
   DashboardMetricsDTO,
+  ClinicalOperationsDTO,
+  PlatformSloDTO,
+  SecurityPostureDTO,
+  InteroperabilityStatusDTO,
+  SystemStatusLevel,
+  SystemServiceStatusDTO,
+  DashboardOverviewDTO,
   AlertPriority,
   AlertStatus,
   AlertDTO,

@@ -3,6 +3,7 @@
 import { PageContainer, PageHeader } from "@/components/layout/app-layout";
 import {
   MetricsRow,
+  EnterpriseOverview,
   RecentPatientsList,
   AlertsPanel,
   ActivityFeed,
@@ -19,6 +20,7 @@ import {
 export default function DashboardPage() {
   const {
     metrics,
+    overview,
     alerts,
     activities,
     loading: dashboardLoading,
@@ -37,7 +39,7 @@ export default function DashboardPage() {
       <PageContainer>
         <PageHeader
           title="Dashboard"
-          description="Overview of your FHIR data and clinical insights"
+          description="Enterprise command center for clinical, platform, and interoperability performance"
         />
         <DashboardSkeleton />
       </PageContainer>
@@ -48,7 +50,7 @@ export default function DashboardPage() {
     <PageContainer>
       <PageHeader
         title="Dashboard"
-        description="Overview of your FHIR data and clinical insights"
+        description="Enterprise command center for clinical, platform, and interoperability performance"
       />
 
       {/* Metrics */}
@@ -61,6 +63,13 @@ export default function DashboardPage() {
       ) : (
         <div className="animate-fade-in-up">
           <MetricsRow metrics={metrics} className="mb-6" />
+        </div>
+      )}
+
+      {/* Enterprise overview */}
+      {overview && (
+        <div className="animate-fade-in-up animate-stagger-1">
+          <EnterpriseOverview overview={overview} className="mb-6" />
         </div>
       )}
 
@@ -114,7 +123,13 @@ export default function DashboardPage() {
           ) : (
             <RecentPatientsList patients={patients} />
           )}
-          <SystemStatus />
+          <SystemStatus
+            services={overview?.systemStatus.map((service) => ({
+              name: service.name,
+              status: service.status,
+              latency: service.latencyMs,
+            }))}
+          />
         </div>
       </div>
     </PageContainer>

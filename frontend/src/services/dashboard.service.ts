@@ -5,6 +5,7 @@ import type { IDashboardRepository } from "@/repositories";
 import type {
   PaginatedResponse,
   DashboardMetricDTO,
+  DashboardOverviewDTO,
   AlertDTO,
   ActivityDTO,
   AlertSearchParams,
@@ -19,6 +20,15 @@ export class DashboardService {
    */
   async getMetrics(): Promise<DashboardMetricDTO[]> {
     return this.repository.getMetrics();
+  }
+
+  /**
+   * Get enterprise dashboard overview
+   */
+  async getOverview(
+    window: "24h" | "7d" | "30d" = "7d"
+  ): Promise<DashboardOverviewDTO> {
+    return this.repository.getOverview(window);
   }
 
   /**

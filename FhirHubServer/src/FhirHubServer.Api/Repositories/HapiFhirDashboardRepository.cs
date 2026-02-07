@@ -3,6 +3,7 @@ using FhirHubServer.Api.Mappers;
 using FhirHubServer.Core.DTOs.Common;
 using FhirHubServer.Core.DTOs.Dashboard;
 using FhirHubServer.Core.Interfaces;
+using FhirHubServer.Core.Services;
 using Hl7.Fhir.Model;
 using Hl7.Fhir.Rest;
 using Task = System.Threading.Tasks.Task;
@@ -77,6 +78,39 @@ public class HapiFhirDashboardRepository : IDashboardRepository
                 new("Pending Results", 0, "flask", null),
                 new("Today's Observations", 0, "activity", null)
             };
+        }
+    }
+
+    public async Task<DashboardOverviewDto> GetOverviewAsync(string? window = null, CancellationToken ct = default)
+    {
+        var client = _clientFactory.CreateClient();
+
+        try
+        {
+            var patientCount = await GetResourceCountAsync(client, "Patient", ct);
+            var alertCount = await GetResourceCountAsync(client, "Flag", ct);
+            var pendingCount = await GetResourceCountAsync(client, "DiagnosticReport", "status=preliminary,registered,partial", ct);
+            var observationCount = await GetResourceCountAsync(client, "Observation", ct);
+            var auditEventCount = await GetResourceCountAsync(client, "AuditEvent", ct);
+
+            var seed = new DashboardOverviewSeed(
+                PatientCount: patientCount,
+                AlertCount: alertCount,
+                PendingResultsCount: pendingCount,
+                ObservationCount: observationCount,
+                AuditEventCount: auditEventCount,
+                FhirResourceTypesServed: 10
+            );
+
+            return EnterpriseDashboardComposer.Compose(seed, window);
+        }
+        catch (FhirOperationException ex)
+        {
+            _logger.LogError(ex, "FHIR operation failed while fetching dashboard overview");
+            return EnterpriseDashboardComposer.Compose(
+                new DashboardOverviewSeed(0, 0, 0, 0, 0, 10),
+                window
+            );
         }
     }
 
@@ -367,6 +401,7 @@ public class HapiFhirDashboardRepository : IDashboardRepository
                 "Flag" => await client.SearchAsync<Flag>(searchParams),
                 "DiagnosticReport" => await client.SearchAsync<DiagnosticReport>(searchParams),
                 "Observation" => await client.SearchAsync<Observation>(searchParams),
+                "AuditEvent" => await client.SearchAsync<AuditEvent>(searchParams),
                 _ => null
             };
 

@@ -5,6 +5,7 @@ import type { IDashboardRepository } from "../interfaces";
 import type {
   PaginatedResponse,
   DashboardMetricDTO,
+  DashboardOverviewDTO,
   AlertDTO,
   ActivityDTO,
   AlertSearchParams,
@@ -19,6 +20,7 @@ import {
   TestTube,
   FileText,
   Calendar,
+  AlertTriangle,
   type LucideIcon,
 } from "@/components/ui/icons";
 
@@ -33,10 +35,15 @@ const iconMap: Record<string, LucideIcon> = {
   flask: TestTube, // Map flask to TestTube as fallback
   filetext: FileText,
   calendar: Calendar,
+  "alert-triangle": AlertTriangle,
 };
 
 interface ApiMetricDTO extends Omit<DashboardMetricDTO, "icon"> {
   icon: string | LucideIcon;
+}
+
+interface ApiOverviewDTO extends Omit<DashboardOverviewDTO, "summaryKpis"> {
+  summaryKpis: ApiMetricDTO[];
 }
 
 export class DashboardRepository implements IDashboardRepository {
@@ -55,6 +62,29 @@ export class DashboardRepository implements IDashboardRepository {
           ? iconMap[metric.icon.toLowerCase()] || Users
           : metric.icon,
     }));
+  }
+
+  async getOverview(
+    window: "24h" | "7d" | "30d" = "7d"
+  ): Promise<DashboardOverviewDTO> {
+    const params = new URLSearchParams();
+    params.set("window", window);
+
+    const overview = await this.apiClient.get<ApiOverviewDTO>(
+      "/api/dashboard/overview",
+      params
+    );
+
+    return {
+      ...overview,
+      summaryKpis: overview.summaryKpis.map((metric) => ({
+        ...metric,
+        icon:
+          typeof metric.icon === "string"
+            ? iconMap[metric.icon.toLowerCase()] || Users
+            : metric.icon,
+      })),
+    };
   }
 
   async getAlerts(limit: number = 10): Promise<AlertDTO[]> {

@@ -27,6 +27,14 @@ public class DashboardController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("overview")]
+    [Authorize(Policy = AuthorizationPolicies.CanViewDashboard)]
+    public async Task<IActionResult> GetOverview([FromQuery] string? window = "7d", CancellationToken ct = default)
+    {
+        var result = await _dashboardService.GetOverviewAsync(window, ct);
+        return Ok(result);
+    }
+
     [HttpGet("alerts")]
     [Authorize(Policy = AuthorizationPolicies.CanViewDashboard)]
     public async Task<IActionResult> GetAlerts([FromQuery] int limit = 10, CancellationToken ct = default)

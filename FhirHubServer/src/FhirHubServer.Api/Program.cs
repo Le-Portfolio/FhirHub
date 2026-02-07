@@ -244,7 +244,11 @@ try
     // CORS
     app.UseCors("Frontend");
 
-    app.UseHttpsRedirection();
+    // Avoid noisy redirect warnings in local/container dev where only HTTP is bound.
+    if (!app.Environment.IsDevelopment())
+    {
+        app.UseHttpsRedirection();
+    }
 
     // Authentication & Authorization
     app.UseAuthentication();

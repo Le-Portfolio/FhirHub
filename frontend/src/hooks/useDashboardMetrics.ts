@@ -4,7 +4,12 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useDashboardService } from "@/services";
-import type { DashboardMetricDTO, AlertDTO, ActivityDTO } from "@/types";
+import type {
+  DashboardMetricDTO,
+  DashboardOverviewDTO,
+  AlertDTO,
+  ActivityDTO,
+} from "@/types";
 
 export interface UseDashboardOptions {
   /**
@@ -26,6 +31,7 @@ export interface UseDashboardOptions {
 
 export interface UseDashboardResult {
   metrics: DashboardMetricDTO[];
+  overview: DashboardOverviewDTO | null;
   alerts: AlertDTO[];
   activities: ActivityDTO[];
   loading: boolean;
@@ -42,6 +48,7 @@ export function useDashboardMetrics(
   const dashboardService = useDashboardService();
 
   const [metrics, setMetrics] = useState<DashboardMetricDTO[]>([]);
+  const [overview, setOverview] = useState<DashboardOverviewDTO | null>(null);
   const [alerts, setAlerts] = useState<AlertDTO[]>([]);
   const [activities, setActivities] = useState<ActivityDTO[]>([]);
   const [loading, setLoading] = useState(immediate);
@@ -51,16 +58,20 @@ export function useDashboardMetrics(
     setLoading(true);
     setError(null);
 
-    const [metricsResult, alertsResult, activitiesResult] =
+    const [overviewResult, alertsResult, activitiesResult] =
       await Promise.allSettled([
-        dashboardService.getMetrics(),
+        dashboardService.getOverview("7d"),
         dashboardService.getAlerts(alertsLimit),
         dashboardService.getActivities(activitiesLimit),
       ]);
 
-    setMetrics(
-      metricsResult.status === "fulfilled" ? metricsResult.value : []
-    );
+    if (overviewResult.status === "fulfilled") {
+      setOverview(overviewResult.value);
+      setMetrics(overviewResult.value.summaryKpis);
+    } else {
+      setOverview(null);
+      setMetrics([]);
+    }
     setAlerts(
       alertsResult.status === "fulfilled" ? alertsResult.value : []
     );
@@ -69,11 +80,11 @@ export function useDashboardMetrics(
     );
 
     // Only set error if ALL requests failed
-    const allFailed = [metricsResult, alertsResult, activitiesResult].every(
+    const allFailed = [overviewResult, alertsResult, activitiesResult].every(
       (r) => r.status === "rejected"
     );
     if (allFailed) {
-      const firstErr = (metricsResult as PromiseRejectedResult).reason;
+      const firstErr = (overviewResult as PromiseRejectedResult).reason;
       setError(
         firstErr instanceof Error
           ? firstErr
@@ -118,6 +129,7 @@ export function useDashboardMetrics(
 
   return {
     metrics,
+    overview,
     alerts,
     activities,
     loading,

@@ -125,7 +125,7 @@ All endpoints are prefixed with `/api` and require a valid JWT unless otherwise 
 | Endpoint Group | Description |
 | --- | --- |
 | `/api/patients` | CRUD for patients, vitals, conditions, medications, labs, and timeline |
-| `/api/dashboard` | Dashboard metrics, alerts, and activity feed |
+| `/api/dashboard` | Dashboard metrics, enterprise overview, alerts, and activity feed |
 | `/api/exports` | Create, track, retry, and cancel bulk data exports |
 | `/api/users` | User management, roles, sessions, and MFA (admin) |
 | `/api/audit` | User and admin audit event logs |

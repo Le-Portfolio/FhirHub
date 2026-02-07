@@ -6,6 +6,7 @@ namespace FhirHubServer.Core.Interfaces;
 public interface IDashboardRepository
 {
     Task<IEnumerable<DashboardMetricDto>> GetMetricsAsync(CancellationToken ct = default);
+    Task<DashboardOverviewDto> GetOverviewAsync(string? window = null, CancellationToken ct = default);
     Task<IEnumerable<AlertDto>> GetAlertsAsync(int limit, CancellationToken ct = default);
     Task<IEnumerable<ActivityDto>> GetActivitiesAsync(int limit, CancellationToken ct = default);
     Task AcknowledgeAlertAsync(string id, CancellationToken ct = default);

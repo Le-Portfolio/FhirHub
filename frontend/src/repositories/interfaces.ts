@@ -18,6 +18,7 @@ import type {
   ExportConfigDTO,
   ResourceCountDTO,
   DashboardMetricDTO,
+  DashboardOverviewDTO,
   AlertDTO,
   ActivityDTO,
   AlertSearchParams,
@@ -220,6 +221,11 @@ export interface IDashboardRepository {
    * Get dashboard metrics
    */
   getMetrics(): Promise<DashboardMetricDTO[]>;
+
+  /**
+   * Get enterprise dashboard overview
+   */
+  getOverview(window?: "24h" | "7d" | "30d"): Promise<DashboardOverviewDTO>;
 
   /**
    * Get active alerts

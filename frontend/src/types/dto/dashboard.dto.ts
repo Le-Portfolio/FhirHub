@@ -32,6 +32,64 @@ export interface DashboardMetricsDTO {
   activeMedications: DashboardMetricDTO;
 }
 
+export interface ClinicalOperationsDTO {
+  criticalLabTurnaroundMinutesP50: number;
+  criticalLabTurnaroundMinutesP95: number;
+  alertAcknowledgeMinutesP50: number;
+  alertAcknowledgeMinutesP95: number;
+  highRiskPatients: number;
+  highRiskTrend?: {
+    value: number;
+    label?: string;
+    isPositive?: boolean;
+  };
+}
+
+export interface PlatformSloDTO {
+  apiAvailabilityPercent30d: number;
+  apiLatencyP50Ms: number;
+  apiLatencyP95Ms: number;
+  apiLatencyP99Ms: number;
+  errorRatePercent: number;
+  exportSuccessRatePercent: number;
+}
+
+export interface SecurityPostureDTO {
+  mfaEnrollmentPercent: number;
+  privilegedActions24h: number;
+  failedLogins24h: number;
+  auditEvents24h: number;
+  auditCoveragePercent: number;
+}
+
+export interface InteroperabilityStatusDTO {
+  smartLaunches24h: number;
+  smartLaunchSuccessRatePercent: number;
+  bulkExports24h: number;
+  bulkExportSuccessRatePercent: number;
+  fhirResourceTypesServed: number;
+}
+
+export type SystemStatusLevel = "healthy" | "degraded" | "down" | "unknown";
+
+export interface SystemServiceStatusDTO {
+  name: string;
+  status: SystemStatusLevel;
+  latencyMs: number;
+  uptimePercent30d: number;
+}
+
+export interface DashboardOverviewDTO {
+  summaryKpis: DashboardMetricDTO[];
+  clinicalOperations: ClinicalOperationsDTO;
+  platformSlo: PlatformSloDTO;
+  securityPosture: SecurityPostureDTO;
+  interoperability: InteroperabilityStatusDTO;
+  systemStatus: SystemServiceStatusDTO[];
+  windowLabel: string;
+  generatedAt: string;
+}
+
 /**
  * Alert priority levels
  */

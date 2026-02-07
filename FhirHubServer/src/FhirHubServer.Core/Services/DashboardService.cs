@@ -16,6 +16,9 @@ public class DashboardService
     public Task<IEnumerable<DashboardMetricDto>> GetMetricsAsync(CancellationToken ct = default)
         => _repository.GetMetricsAsync(ct);
 
+    public Task<DashboardOverviewDto> GetOverviewAsync(string? window = null, CancellationToken ct = default)
+        => _repository.GetOverviewAsync(window, ct);
+
     public Task<IEnumerable<AlertDto>> GetAlertsAsync(int limit, CancellationToken ct = default)
         => _repository.GetAlertsAsync(limit, ct);
 

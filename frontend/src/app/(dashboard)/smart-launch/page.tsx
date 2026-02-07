@@ -17,6 +17,7 @@ import {
   SmartAuthState,
   SmartTokenResponse,
 } from "@/lib/smart-auth";
+import { getKeycloak } from "@/lib/keycloak";
 
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:5197";
@@ -209,6 +210,20 @@ export default function SmartLaunchPage() {
         codeChallenge: pkce.challenge,
         forceLogin: config.forceLogin,
       });
+
+      // 7. Save dashboard Keycloak tokens so we can restore them after
+      //    the SMART redirect without a second round-trip to Keycloak
+      const kc = getKeycloak();
+      if (kc.authenticated && kc.token && kc.refreshToken) {
+        sessionStorage.setItem(
+          "dashboard-tokens",
+          JSON.stringify({
+            access_token: kc.token,
+            refresh_token: kc.refreshToken,
+            id_token: kc.idToken,
+          })
+        );
+      }
 
       window.location.href = authUrl;
     } catch (err) {

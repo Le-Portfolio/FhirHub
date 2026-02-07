@@ -28,9 +28,13 @@ export async function initKeycloak(
   _initialized = true;
 
   // Check for tokens from direct login (e.g. guest login via ROPC grant)
-  const directTokens = sessionStorage.getItem("direct-login-tokens");
+  // or saved dashboard tokens (preserved across SMART launch redirects)
+  const directTokens =
+    sessionStorage.getItem("direct-login-tokens") ||
+    sessionStorage.getItem("dashboard-tokens");
   if (directTokens) {
     sessionStorage.removeItem("direct-login-tokens");
+    sessionStorage.removeItem("dashboard-tokens");
     const { access_token, refresh_token, id_token } = JSON.parse(directTokens);
     return kc.init({
       pkceMethod: "S256",

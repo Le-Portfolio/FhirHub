@@ -48,6 +48,7 @@ export async function initKeycloak(
   return kc.init({
     ...options,
     pkceMethod: "S256",
+    responseMode: "query",
     checkLoginIframe: false,
   });
 }

@@ -2,6 +2,7 @@
   "realm": "fhirhub",
   "enabled": true,
   "registrationAllowed": true,
+  "loginTheme": "fhirhub",
   "roles": {
     "realm": [
       {
@@ -124,10 +125,14 @@
       "baseUrl": "",
       "redirectUris": [
         "http://localhost:7002/*",
+        "http://localhost:5173/*",
+        "http://localhost:5174/*",
         "https://fhirhub.davidle.dev/*"
       ],
       "webOrigins": [
         "http://localhost:7002",
+        "http://localhost:5173",
+        "http://localhost:5174",
         "https://fhirhub.davidle.dev"
       ],
       "defaultClientScopes": [

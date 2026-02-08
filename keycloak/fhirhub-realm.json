@@ -130,6 +130,15 @@
         "http://localhost:7002",
         "https://fhirhub.davidle.dev"
       ],
+      "defaultClientScopes": [
+        "profile",
+        "email",
+        "roles",
+        "web-origins"
+      ],
+      "optionalClientScopes": [
+        "offline_access"
+      ],
       "protocolMappers": [
         {
           "name": "fhirhub-audience",
@@ -140,6 +149,20 @@
             "included.client.audience": "fhirhub-frontend",
             "id.token.claim": "false",
             "access.token.claim": "true"
+          }
+        },
+        {
+          "name": "realm-roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "multivalued": "true",
+            "userinfo.token.claim": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "realm_access.roles",
+            "jsonType.label": "String"
           }
         }
       ]
@@ -177,9 +200,13 @@
         "pkce.code.challenge.method": "S256"
       },
       "defaultClientScopes": [
-        "openid"
+        "profile",
+        "email",
+        "roles",
+        "web-origins"
       ],
       "optionalClientScopes": [
+        "offline_access",
         "patient/Patient.read",
         "patient/Observation.read",
         "patient/Condition.read",
@@ -215,6 +242,20 @@
             "access.token.claim": "true",
             "introspection.token.claim": "true"
           }
+        },
+        {
+          "name": "realm-roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "multivalued": "true",
+            "userinfo.token.claim": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "realm_access.roles",
+            "jsonType.label": "String"
+          }
         }
       ]
     }
@@ -245,7 +286,8 @@
       "firstName": "Guest",
       "lastName": "User",
       "attributes": {
-        "fhir_user_reference": ["Practitioner/prac-guest"]
+        "fhir_user_reference": ["Practitioner/prac-guest"],
+        "fhir_patient_id": ["7039"]
       },
       "credentials": [
         {

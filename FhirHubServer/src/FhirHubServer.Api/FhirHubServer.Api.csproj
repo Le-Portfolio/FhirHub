@@ -24,8 +24,4 @@
       </Content>
     </ItemGroup>
 
-    <ItemGroup>
-      <ProjectReference Include="..\FhirHubServer.Core\FhirHubServer.Core.csproj" />
-    </ItemGroup>
-
 </Project>

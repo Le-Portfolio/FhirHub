@@ -2,14 +2,14 @@ using System.Security.Claims;
 using System.Threading.RateLimiting;
 using FluentValidation;
 using FluentValidation.AspNetCore;
-using FhirHubServer.Api.Authorization;
-using FhirHubServer.Api.Configuration;
-using FhirHubServer.Api.Infrastructure;
-using FhirHubServer.Api.Validators;
-using FhirHubServer.Core.Extensions;
-using FhirHubServer.Core.Interfaces;
-using FhirHubServer.Api.Middleware;
-using FhirHubServer.Api.Repositories;
+using FhirHubServer.Api.Common.Authorization;
+using FhirHubServer.Api.Common.Configuration;
+using FhirHubServer.Api.Common.DependencyInjection;
+using FhirHubServer.Api.Common.Infrastructure;
+using FhirHubServer.Api.Common.Middleware;
+using FhirHubServer.Api.Features.PatientManagement.Validators;
+using FhirHubServer.Api.Features.SmartConfiguration;
+using FhirHubServer.Api.Features.UserManagement.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.RateLimiting;
@@ -187,30 +187,11 @@ try
         });
     });
 
-    // Core Services
-    builder.Services.AddCoreServices();
+    // Auto-discover and register all services/repositories via marker interfaces
+    builder.Services.AddApplicationServices();
 
-    // HAPI FHIR Configuration
-    builder.Services.Configure<HapiFhirOptions>(
-        builder.Configuration.GetSection("HapiFhir"));
-
-    // Infrastructure
-    builder.Services.AddSingleton<IFhirClientFactory, FhirClientFactory>();
-
-    // Repositories (HAPI FHIR)
-    builder.Services.AddScoped<IPatientRepository, HapiFhirPatientRepository>();
-    builder.Services.AddScoped<IDashboardRepository, HapiFhirDashboardRepository>();
-    builder.Services.AddScoped<IExportRepository, HapiFhirExportRepository>();
-
-    // SMART on FHIR configuration
-    builder.Services.Configure<SmartConfigOptions>(options =>
-    {
-        options.PublicIssuer = builder.Configuration["Keycloak:PublicIssuer"]
-            ?? builder.Configuration["Keycloak:Authority"]
-            ?? "http://localhost:8180/realms/fhirhub";
-    });
-
-    // Keycloak Admin API
+    // Options configuration
+    builder.Services.Configure<HapiFhirOptions>(builder.Configuration.GetSection("HapiFhir"));
     builder.Services.Configure<KeycloakAdminOptions>(options =>
     {
         options.AdminApiBaseUrl = builder.Configuration["Keycloak:AdminApiBaseUrl"] ?? "http://localhost:8180";
@@ -218,6 +199,14 @@ try
         options.BackendClientId = builder.Configuration["Keycloak:BackendClientId"] ?? "fhirhub-backend";
         options.BackendClientSecret = builder.Configuration["Keycloak:BackendClientSecret"] ?? "";
     });
+    builder.Services.Configure<SmartConfigOptions>(options =>
+    {
+        options.PublicIssuer = builder.Configuration["Keycloak:PublicIssuer"]
+            ?? builder.Configuration["Keycloak:Authority"]
+            ?? "http://localhost:8180/realms/fhirhub";
+    });
+
+    // Special registrations (HttpClient factory, framework interfaces)
     builder.Services.AddHttpClient<IKeycloakAdminService, KeycloakAdminService>();
 
     var app = builder.Build();

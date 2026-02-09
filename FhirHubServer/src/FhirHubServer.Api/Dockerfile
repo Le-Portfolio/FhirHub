@@ -11,7 +11,6 @@ LABEL org.opencontainers.image.licenses="MIT"
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
-COPY ["src/FhirHubServer.Core/FhirHubServer.Core.csproj", "src/FhirHubServer.Core/"]
 COPY ["src/FhirHubServer.Api/FhirHubServer.Api.csproj", "src/FhirHubServer.Api/"]
 RUN dotnet restore "src/FhirHubServer.Api/FhirHubServer.Api.csproj"
 COPY . .

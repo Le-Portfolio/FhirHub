@@ -1,8 +1,6 @@
-﻿
+
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FhirHubServer.Api", "src\FhirHubServer.Api\FhirHubServer.Api.csproj", "{010946F8-3346-49D9-AF2B-923AA4536F0C}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FhirHubServer.Core", "src\FhirHubServer.Core\FhirHubServer.Core.csproj", "{7E7270A7-45A7-4ABE-B05D-96C02DE9A50C}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FhirHubServer.Tests", "tests\FhirHubServer.Tests\FhirHubServer.Tests.csproj", "{C2FC2857-E116-4F7A-9472-A601E4B0545B}"
 EndProject
@@ -16,10 +14,6 @@ Global
 		{010946F8-3346-49D9-AF2B-923AA4536F0C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{010946F8-3346-49D9-AF2B-923AA4536F0C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{010946F8-3346-49D9-AF2B-923AA4536F0C}.Release|Any CPU.Build.0 = Release|Any CPU
-		{7E7270A7-45A7-4ABE-B05D-96C02DE9A50C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{7E7270A7-45A7-4ABE-B05D-96C02DE9A50C}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{7E7270A7-45A7-4ABE-B05D-96C02DE9A50C}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{7E7270A7-45A7-4ABE-B05D-96C02DE9A50C}.Release|Any CPU.Build.0 = Release|Any CPU
 		{C2FC2857-E116-4F7A-9472-A601E4B0545B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{C2FC2857-E116-4F7A-9472-A601E4B0545B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C2FC2857-E116-4F7A-9472-A601E4B0545B}.Release|Any CPU.ActiveCfg = Release|Any CPU

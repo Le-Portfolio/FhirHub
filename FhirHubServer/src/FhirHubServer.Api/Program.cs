@@ -9,8 +9,10 @@ using FhirHubServer.Api.Common.Infrastructure;
 using FhirHubServer.Api.Common.Middleware;
 using FhirHubServer.Api.Features.PatientManagement.Validators;
 using FhirHubServer.Api.Features.SmartConfiguration;
+using FhirHubServer.Api.Features.MirthConnect.Services;
 using FhirHubServer.Api.Features.UserManagement.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.Extensions.Options;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
@@ -206,8 +208,23 @@ try
             ?? "http://localhost:8180/realms/fhirhub";
     });
 
+    // Mirth Connect configuration
+    builder.Services.Configure<MirthConnectOptions>(builder.Configuration.GetSection("MirthConnect"));
+
     // Special registrations (HttpClient factory, framework interfaces)
     builder.Services.AddHttpClient<IKeycloakAdminService, KeycloakAdminService>();
+
+    builder.Services.AddHttpClient<IMirthConnectService, MirthConnectService>()
+        .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+        {
+            ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator,
+            UseCookies = false
+        })
+        .ConfigureHttpClient((sp, client) =>
+        {
+            var options = sp.GetRequiredService<IOptions<MirthConnectOptions>>().Value;
+            client.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
+        });
 
     var app = builder.Build();
 

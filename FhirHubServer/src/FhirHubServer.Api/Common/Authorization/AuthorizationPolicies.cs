@@ -17,6 +17,7 @@ public static class AuthorizationPolicies
     public const string CanDeleteExports = nameof(CanDeleteExports);
     public const string CanManageUsers = nameof(CanManageUsers);
     public const string CanViewAuditLogs = nameof(CanViewAuditLogs);
+    public const string CanManageMirth = nameof(CanManageMirth);
     public const string PatientDataAccess = nameof(PatientDataAccess);
 
     public static readonly Dictionary<string, string[]> PolicyRoles = new()
@@ -36,5 +37,6 @@ public static class AuthorizationPolicies
         [CanDeleteExports] = ["admin"],
         [CanManageUsers] = ["admin"],
         [CanViewAuditLogs] = ["admin"],
+        [CanManageMirth] = ["admin"],
     };
 }

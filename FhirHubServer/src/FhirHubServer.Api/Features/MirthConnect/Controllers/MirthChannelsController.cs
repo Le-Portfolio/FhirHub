@@ -26,11 +26,26 @@ public class MirthChannelsController : ControllerBase
         return Ok(channels);
     }
 
+    [HttpGet("idsAndNames")]
+    public async Task<IActionResult> GetIdsAndNames(CancellationToken ct)
+    {
+        var idsAndNames = await _mirthService.GetChannelIdsAndNamesAsync(ct);
+        return Ok(idsAndNames);
+    }
+
     [HttpGet("statuses")]
     public async Task<IActionResult> GetStatuses(CancellationToken ct)
     {
         var statuses = await _mirthService.GetChannelStatusesAsync(ct);
         return Ok(statuses);
+    }
+
+    [HttpGet("{id}")]
+    public async Task<IActionResult> GetChannel(string id, CancellationToken ct)
+    {
+        var channel = await _mirthService.GetChannelAsync(id, ct);
+        if (channel is null) return NotFound();
+        return Ok(channel);
     }
 
     [HttpGet("{id}/status")]
@@ -54,6 +69,22 @@ public class MirthChannelsController : ControllerBase
     public async Task<IActionResult> Stop(string id, CancellationToken ct)
     {
         await _mirthService.StopChannelAsync(id, ct);
+        return NoContent();
+    }
+
+    [HttpPost("{id}/deploy")]
+    [EnableRateLimiting("WriteOperations")]
+    public async Task<IActionResult> Deploy(string id, CancellationToken ct)
+    {
+        await _mirthService.DeployChannelAsync(id, ct);
+        return NoContent();
+    }
+
+    [HttpPost("{id}/undeploy")]
+    [EnableRateLimiting("WriteOperations")]
+    public async Task<IActionResult> Undeploy(string id, CancellationToken ct)
+    {
+        await _mirthService.UndeployChannelAsync(id, ct);
         return NoContent();
     }
 

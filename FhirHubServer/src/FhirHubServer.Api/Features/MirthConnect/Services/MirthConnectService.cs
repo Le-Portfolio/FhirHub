@@ -257,6 +257,60 @@ public class MirthConnectService : IMirthConnectService
         await SendAsync(request, ct);
     }
 
+    public async Task<List<MirthChannelIdNameDto>> GetChannelIdsAndNamesAsync(CancellationToken ct)
+    {
+        var request = await CreateRequestAsync(HttpMethod.Get, $"{_options.BaseUrl}/channels/idsAndNames", ct);
+        var json = await SendForStringAsync(request, ct);
+        if (string.IsNullOrWhiteSpace(json))
+            return [];
+
+        var doc = JsonDocument.Parse(json);
+        if (!doc.RootElement.TryGetProperty("map", out var mapEl))
+            return [];
+        if (!mapEl.TryGetProperty("entry", out var entryEl))
+            return [];
+
+        var result = new List<MirthChannelIdNameDto>();
+        if (entryEl.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var entry in entryEl.EnumerateArray())
+            {
+                var dto = ParseIdNameEntry(entry);
+                if (dto is not null) result.Add(dto);
+            }
+        }
+        else if (entryEl.ValueKind == JsonValueKind.Object)
+        {
+            var dto = ParseIdNameEntry(entryEl);
+            if (dto is not null) result.Add(dto);
+        }
+
+        return result;
+    }
+
+    public async Task<MirthChannelDto?> GetChannelAsync(string channelId, CancellationToken ct)
+    {
+        var request = await CreateRequestAsync(HttpMethod.Get, $"{_options.BaseUrl}/channels/{channelId}", ct);
+        var response = await SendRawAsync(request, ct);
+        if (response.StatusCode == HttpStatusCode.NotFound)
+            return null;
+        response.EnsureSuccessStatusCode();
+        var channel = await response.Content.ReadFromJsonAsync<MirthInternalChannel>(JsonOptions, ct);
+        return channel is null ? null : MapToChannelDto(channel);
+    }
+
+    public async Task DeployChannelAsync(string channelId, CancellationToken ct)
+    {
+        var request = await CreateRequestAsync(HttpMethod.Post, $"{_options.BaseUrl}/channels/{channelId}/_deploy", ct);
+        await SendAsync(request, ct);
+    }
+
+    public async Task UndeployChannelAsync(string channelId, CancellationToken ct)
+    {
+        var request = await CreateRequestAsync(HttpMethod.Post, $"{_options.BaseUrl}/channels/{channelId}/_undeploy", ct);
+        await SendAsync(request, ct);
+    }
+
     public async Task<MirthChannelStatisticsDto?> GetChannelStatisticsAsync(string channelId, CancellationToken ct)
     {
         var request = await CreateRequestAsync(HttpMethod.Get, $"{_options.BaseUrl}/channels/{channelId}/statistics", ct);
@@ -378,6 +432,21 @@ public class MirthConnectService : IMirthConnectService
             Filtered = filtered,
             Queued = queued,
         };
+    }
+
+    private static MirthChannelIdNameDto? ParseIdNameEntry(JsonElement entry)
+    {
+        if (!entry.TryGetProperty("string", out var strEl))
+            return null;
+
+        if (strEl.ValueKind == JsonValueKind.Array)
+        {
+            var items = strEl.EnumerateArray().ToArray();
+            if (items.Length >= 2)
+                return new MirthChannelIdNameDto(items[0].GetString()!, items[1].GetString()!);
+        }
+
+        return null;
     }
 
     private static MirthChannelDto MapToChannelDto(MirthInternalChannel c) => new(

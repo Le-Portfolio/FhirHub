@@ -65,6 +65,8 @@ public record MirthMessageSearchParams
     public string? Status { get; init; }
 }
 
+public record MirthChannelIdNameDto(string Id, string Name);
+
 public record CreateChannelRequest(string ChannelXml);
 
 public record UpdateChannelRequest(string ChannelXml);

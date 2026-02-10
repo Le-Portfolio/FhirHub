@@ -14,6 +14,10 @@ public interface IMirthConnectService
     Task<MirthChannelStatisticsDto?> GetChannelStatisticsAsync(string channelId, CancellationToken ct = default);
     Task<string> CreateChannelAsync(CreateChannelRequest request, CancellationToken ct = default);
     Task UpdateChannelAsync(string channelId, UpdateChannelRequest request, CancellationToken ct = default);
+    Task<List<MirthChannelIdNameDto>> GetChannelIdsAndNamesAsync(CancellationToken ct = default);
+    Task<MirthChannelDto?> GetChannelAsync(string channelId, CancellationToken ct = default);
+    Task DeployChannelAsync(string channelId, CancellationToken ct = default);
+    Task UndeployChannelAsync(string channelId, CancellationToken ct = default);
     Task<MirthMessageListDto> GetMessagesAsync(string channelId, MirthMessageSearchParams searchParams, CancellationToken ct = default);
     Task<MirthMessageDto?> GetMessageAsync(string channelId, long messageId, CancellationToken ct = default);
 }

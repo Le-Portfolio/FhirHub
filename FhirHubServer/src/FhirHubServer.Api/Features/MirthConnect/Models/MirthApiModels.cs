@@ -57,9 +57,16 @@ internal record MirthChannelStatistics
     public long Queued { get; init; }
 }
 
+internal record MirthMessageListWrapper
+{
+    [JsonPropertyName("list")]
+    public MirthMessageListResponse? List { get; init; }
+}
+
 internal record MirthMessageListResponse
 {
     [JsonPropertyName("message")]
+    [JsonConverter(typeof(SingleOrArrayConverter<MirthInternalMessage>))]
     public List<MirthInternalMessage>? Message { get; init; }
     [JsonPropertyName("total")]
     public int Total { get; init; }
@@ -82,7 +89,32 @@ internal record MirthInternalMessage
 internal record MirthConnectorMessagesWrapper
 {
     [JsonPropertyName("entry")]
+    [JsonConverter(typeof(SingleOrArrayConverter<MirthConnectorMessageEntry>))]
     public List<MirthConnectorMessageEntry>? Entry { get; init; }
+}
+
+/// <summary>
+/// Handles Mirth's polymorphic JSON where a field is an object when there is a single item
+/// and an array when there are multiple items.
+/// </summary>
+internal class SingleOrArrayConverter<T> : JsonConverter<List<T>?>
+{
+    public override List<T>? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        if (reader.TokenType == JsonTokenType.StartArray)
+            return JsonSerializer.Deserialize<List<T>>(ref reader, options);
+
+        if (reader.TokenType == JsonTokenType.StartObject)
+        {
+            var item = JsonSerializer.Deserialize<T>(ref reader, options);
+            return item is null ? [] : [item];
+        }
+
+        return null;
+    }
+
+    public override void Write(Utf8JsonWriter writer, List<T>? value, JsonSerializerOptions options) =>
+        JsonSerializer.Serialize(writer, value, options);
 }
 
 internal record MirthConnectorMessageEntry
@@ -111,6 +143,8 @@ internal record MirthInternalConnectorMessage
     public MirthInternalContent? Sent { get; init; }
     [JsonPropertyName("response")]
     public MirthInternalContent? Response { get; init; }
+    [JsonPropertyName("processingErrorContent")]
+    public MirthInternalContent? ProcessingErrorContent { get; init; }
 }
 
 internal record MirthInternalContent

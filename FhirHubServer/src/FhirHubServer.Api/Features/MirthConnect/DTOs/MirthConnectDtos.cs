@@ -46,7 +46,8 @@ public record MirthConnectorMessageDto(
     MirthMessageContentDto? Raw,
     MirthMessageContentDto? Encoded,
     MirthMessageContentDto? Sent,
-    MirthMessageContentDto? Response);
+    MirthMessageContentDto? Response,
+    MirthMessageContentDto? ProcessingError);
 
 public record MirthMessageContentDto(
     string? ContentType,

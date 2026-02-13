@@ -210,11 +210,12 @@ try
 
     // Mirth Connect configuration
     builder.Services.Configure<MirthConnectOptions>(builder.Configuration.GetSection("MirthConnect"));
+    builder.Services.Configure<MirthDatabaseOptions>(builder.Configuration.GetSection("MirthDatabase"));
 
     // Special registrations (HttpClient factory, framework interfaces)
     builder.Services.AddHttpClient<IKeycloakAdminService, KeycloakAdminService>();
 
-    builder.Services.AddHttpClient<IMirthConnectService, MirthConnectService>()
+    builder.Services.AddHttpClient<IMirthConnectApiService, MirthConnectApiService>()
         .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
         {
             ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator,

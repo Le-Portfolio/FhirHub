@@ -16,6 +16,7 @@ public static class PatientConverter
             var mrn = patientIds[0];
             patient.Identifier.Add(new Identifier
             {
+                Type = new CodeableConcept("http://terminology.hl7.org/CodeSystem/v2-0203", "MR", "Medical Record Number"),
                 System = "http://hospital.example.org/mrn",
                 Value = mrn.IDNumber.Value
             });

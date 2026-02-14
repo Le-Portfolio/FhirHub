@@ -1,7 +1,7 @@
 using FhirHubServer.Api.Common.DependencyInjection;
 using FhirHubServer.Api.Features.Hl7Ingestion.Handlers;
 using NHapi.Base.Model;
-using NHapi.Model.V251.Segment;
+using NHapi.Base.Util;
 
 namespace FhirHubServer.Api.Features.Hl7Ingestion.Routing;
 
@@ -16,9 +16,9 @@ public class MessageRouter : IMessageRouter, IScopedService
 
     public IHl7MessageHandler? Route(IMessage message)
     {
-        var msh = (MSH)message.GetStructure("MSH");
-        var messageType = msh.MessageType.MessageCode.Value ?? "";
-        var triggerEvent = msh.MessageType.TriggerEvent.Value ?? "";
+        var terser = new Terser(message);
+        var messageType = terser.Get("/MSH-9-1") ?? "";
+        var triggerEvent = terser.Get("/MSH-9-2") ?? "";
 
         return _handlers.FirstOrDefault(h => h.CanHandle(messageType, triggerEvent));
     }

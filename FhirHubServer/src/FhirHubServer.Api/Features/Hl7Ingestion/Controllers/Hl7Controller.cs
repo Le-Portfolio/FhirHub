@@ -3,6 +3,7 @@ using FhirHubServer.Api.Features.Hl7Ingestion.Parsing;
 using FhirHubServer.Api.Features.Hl7Ingestion.Routing;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using NHapi.Base.Util;
 
 namespace FhirHubServer.Api.Features.Hl7Ingestion.Controllers;
 
@@ -32,6 +33,9 @@ public class Hl7Controller : ControllerBase
         if (string.IsNullOrWhiteSpace(rawHl7))
             return UnprocessableEntity(new IngestResult(false, "", "", [], "Empty HL7 message body"));
 
+        // Normalize segment separators to CR as required by HL7 spec
+        rawHl7 = rawHl7.Replace("\r\n", "\r").Replace("\n", "\r");
+
         // Parse
         NHapi.Base.Model.IMessage message;
         try
@@ -48,10 +52,11 @@ public class Hl7Controller : ControllerBase
         var handler = _router.Route(message);
         if (handler is null)
         {
-            var msh = (NHapi.Model.V251.Segment.MSH)message.GetStructure("MSH");
-            var msgType = $"{msh.MessageType.MessageCode.Value}^{msh.MessageType.TriggerEvent.Value}";
+            var terser = new Terser(message);
+            var msgType = $"{terser.Get("/MSH-9-1")}^{terser.Get("/MSH-9-2")}";
+            var controlId = terser.Get("/MSH-10") ?? "";
             _logger.LogWarning("No handler for message type {MessageType}", msgType);
-            return BadRequest(new IngestResult(false, msh.MessageControlID.Value ?? "", msgType, [],
+            return BadRequest(new IngestResult(false, controlId, msgType, [],
                 $"Unsupported message type: {msgType}"));
         }
 

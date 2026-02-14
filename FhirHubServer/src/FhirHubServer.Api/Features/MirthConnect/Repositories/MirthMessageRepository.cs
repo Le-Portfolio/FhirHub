@@ -190,8 +190,8 @@ public class MirthMessageRepository : IMirthMessageRepository, IScopedService
                     MapContent(msgContents, 1),   // RAW
                     MapContent(msgContents, 3),   // ENCODED
                     MapContent(msgContents, 4),   // SENT
-                    MapContent(msgContents, 5),   // RESPONSE
-                    MapContent(msgContents, 9));   // PROCESSING_ERROR
+                    MapContent(msgContents, 6),   // RESPONSE
+                    MapContent(msgContents, 12));  // PROCESSING_ERROR
             })
             .ToList();
 

@@ -9,7 +9,31 @@ public record MirthChannelDto(
     string Name,
     string? Description,
     bool Enabled,
-    int Revision);
+    int Revision,
+    MirthConnectorDto? SourceConnector,
+    List<MirthConnectorDto> DestinationConnectors);
+
+public record MirthConnectorDto(
+    int MetaDataId,
+    string Name,
+    string TransportName,
+    string Mode,
+    bool Enabled,
+    MirthConnectorPropertiesDto Properties);
+
+public record MirthConnectorPropertiesDto(
+    string? Host,
+    string? Port,
+    string? ContextPath,
+    string? Method,
+    string? Charset,
+    int? Timeout,
+    string? ResponseContentType,
+    string? InboundDataType,
+    string? OutboundDataType,
+    bool? QueueEnabled,
+    int? RetryCount,
+    int? RetryIntervalMs);
 
 public record MirthChannelStatusDto(
     string ChannelId,
@@ -67,6 +91,21 @@ public record MirthMessageSearchParams
 }
 
 public record MirthChannelIdNameDto(string Id, string Name);
+
+public record TestConnectionRequest
+{
+    public required string Url { get; init; }
+    public string Method { get; init; } = "POST";
+    public string ContentType { get; init; } = "text/plain";
+    public string? Body { get; init; }
+    public int TimeoutMs { get; init; } = 10_000;
+}
+
+public record TestConnectionResponse(
+    int StatusCode,
+    string? Body,
+    long ElapsedMs,
+    string? Error);
 
 public record CreateChannelRequest(string ChannelXml);
 

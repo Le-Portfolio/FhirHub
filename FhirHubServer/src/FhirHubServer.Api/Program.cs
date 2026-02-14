@@ -9,6 +9,7 @@ using FhirHubServer.Api.Common.Infrastructure;
 using FhirHubServer.Api.Common.Middleware;
 using FhirHubServer.Api.Features.PatientManagement.Validators;
 using FhirHubServer.Api.Features.SmartConfiguration;
+using FhirHubServer.Api.Features.Hl7Ingestion.Handlers;
 using FhirHubServer.Api.Features.MirthConnect.Services;
 using FhirHubServer.Api.Features.UserManagement.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -191,6 +192,9 @@ try
 
     // Auto-discover and register all services/repositories via marker interfaces
     builder.Services.AddApplicationServices();
+
+    // HL7 message handlers (explicit registration for IEnumerable<IHl7MessageHandler> injection)
+    builder.Services.AddScoped<IHl7MessageHandler, OruHandler>();
 
     // Options configuration
     builder.Services.Configure<HapiFhirOptions>(builder.Configuration.GetSection("HapiFhir"));

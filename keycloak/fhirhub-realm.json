@@ -127,23 +127,70 @@
         "http://localhost:7002/*",
         "http://localhost:5173/*",
         "http://localhost:5174/*",
-        "https://fhirhub.davidle.dev/*"
+        "https://fhirhub.davidle.dev/*",
+        "https://interopnimbus.davidle.dev/*"
       ],
       "webOrigins": [
         "http://localhost:7002",
         "http://localhost:5173",
         "http://localhost:5174",
-        "https://fhirhub.davidle.dev"
+        "https://fhirhub.davidle.dev",
+        "https://interopnimbus.davidle.dev/*"
       ],
-      "defaultClientScopes": [
-        "profile",
-        "email",
-        "roles",
-        "web-origins"
+      "defaultClientScopes": ["profile", "email", "roles", "web-origins"],
+      "optionalClientScopes": ["offline_access"],
+      "protocolMappers": [
+        {
+          "name": "fhirhub-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "fhirhub-frontend",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        },
+        {
+          "name": "realm-roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "multivalued": "true",
+            "userinfo.token.claim": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "realm_access.roles",
+            "jsonType.label": "String"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "interopnimbus-frontend",
+      "name": "InteropNimbus Frontend",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "rootUrl": "",
+      "baseUrl": "",
+      "redirectUris": [
+        "http://localhost:5173/*",
+        "http://localhost:5174/*",
+        "https://interopnimbus.davidle.dev/*"
       ],
-      "optionalClientScopes": [
-        "offline_access"
+      "webOrigins": [
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "https://interopnimbus.davidle.dev"
       ],
+      "defaultClientScopes": ["profile", "email", "roles", "web-origins"],
+      "optionalClientScopes": ["offline_access"],
+      "attributes": {
+        "login_theme": "interopnimbus"
+      },
       "protocolMappers": [
         {
           "name": "fhirhub-audience",
@@ -197,19 +244,11 @@
         "http://localhost:7002/smart-launch/callback",
         "https://fhirhub.davidle.dev/smart-launch/callback"
       ],
-      "webOrigins": [
-        "http://localhost:7002",
-        "https://fhirhub.davidle.dev"
-      ],
+      "webOrigins": ["http://localhost:7002", "https://fhirhub.davidle.dev"],
       "attributes": {
         "pkce.code.challenge.method": "S256"
       },
-      "defaultClientScopes": [
-        "profile",
-        "email",
-        "roles",
-        "web-origins"
-      ],
+      "defaultClientScopes": ["profile", "email", "roles", "web-origins"],
       "optionalClientScopes": [
         "offline_access",
         "patient/Patient.read",

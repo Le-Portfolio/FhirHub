@@ -39,14 +39,18 @@ public class MirthConnectService : IMirthConnectService, IScopedService
     public async Task<List<MirthChannelDto>> GetChannelsAsync(CancellationToken ct = default)
     {
         var entities = await _channelRepository.GetAllChannelsAsync(ct);
-        return entities.Select(e => new MirthChannelDto(e.Id, e.Name, e.Description, e.Enabled, e.Revision)).ToList();
+        return entities.Select(e => new MirthChannelDto(
+            e.Id, e.Name, e.Description, e.Enabled, e.Revision,
+            e.SourceConnector, e.DestinationConnectors)).ToList();
     }
 
     public async Task<MirthChannelDto?> GetChannelAsync(string channelId, CancellationToken ct = default)
     {
         var entity = await _channelRepository.GetChannelByIdAsync(channelId, ct);
         if (entity is null) return null;
-        return new MirthChannelDto(entity.Id, entity.Name, entity.Description, entity.Enabled, entity.Revision);
+        return new MirthChannelDto(
+            entity.Id, entity.Name, entity.Description, entity.Enabled, entity.Revision,
+            entity.SourceConnector, entity.DestinationConnectors);
     }
 
     public async Task<List<MirthChannelIdNameDto>> GetChannelIdsAndNamesAsync(CancellationToken ct = default)

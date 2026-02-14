@@ -40,15 +40,15 @@ public class MirthContentEntity
 
     /// <summary>
     /// Maps Mirth content_type integers:
-    /// 1=RAW, 3=ENCODED, 4=SENT, 5=RESPONSE, 9=PROCESSING_ERROR
+    /// 1=RAW, 3=ENCODED, 4=SENT, 6=RESPONSE, 12=PROCESSING_ERROR
     /// </summary>
     public string ContentTypeName => ContentType switch
     {
         1 => "RAW",
         3 => "ENCODED",
         4 => "SENT",
-        5 => "RESPONSE",
-        9 => "PROCESSING_ERROR",
+        6 => "RESPONSE",
+        12 => "PROCESSING_ERROR",
         _ => $"UNKNOWN({ContentType})"
     };
 }

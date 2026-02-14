@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using System.Text;
 using FhirHubServer.Api.Common.Authorization;
 using FhirHubServer.Api.Features.MirthConnect.DTOs;
 using FhirHubServer.Api.Features.MirthConnect.Services;
@@ -13,10 +15,12 @@ namespace FhirHubServer.Api.Features.MirthConnect.Controllers;
 public class MirthChannelsController : ControllerBase
 {
     private readonly IMirthConnectService _mirthService;
+    private readonly IHttpClientFactory _httpClientFactory;
 
-    public MirthChannelsController(IMirthConnectService mirthService)
+    public MirthChannelsController(IMirthConnectService mirthService, IHttpClientFactory httpClientFactory)
     {
         _mirthService = mirthService;
+        _httpClientFactory = httpClientFactory;
     }
 
     [HttpGet]
@@ -110,5 +114,51 @@ public class MirthChannelsController : ControllerBase
     {
         await _mirthService.UpdateChannelAsync(id, request, ct);
         return NoContent();
+    }
+
+    [HttpPost("test-connection")]
+    [EnableRateLimiting("WriteOperations")]
+    public async Task<IActionResult> TestConnection([FromBody] TestConnectionRequest request, CancellationToken ct)
+    {
+        if (!Uri.TryCreate(request.Url, UriKind.Absolute, out var uri)
+            || (uri.Scheme != "http" && uri.Scheme != "https"))
+        {
+            return BadRequest(new TestConnectionResponse(0, null, 0, "Invalid URL"));
+        }
+
+        var client = _httpClientFactory.CreateClient();
+        client.Timeout = TimeSpan.FromMilliseconds(Math.Clamp(request.TimeoutMs, 1_000, 30_000));
+
+        var sw = Stopwatch.StartNew();
+        try
+        {
+            var httpMethod = new HttpMethod(request.Method.ToUpperInvariant());
+            using var msg = new HttpRequestMessage(httpMethod, uri);
+
+            if (request.Body is not null && httpMethod != HttpMethod.Get)
+            {
+                msg.Content = new StringContent(request.Body, Encoding.UTF8, request.ContentType);
+            }
+
+            using var response = await client.SendAsync(msg, ct);
+            sw.Stop();
+
+            var body = await response.Content.ReadAsStringAsync(ct);
+            const int maxBodyLen = 10_000;
+            if (body.Length > maxBodyLen)
+                body = body[..maxBodyLen] + $"\n... truncated ({body.Length} chars total)";
+
+            return Ok(new TestConnectionResponse((int)response.StatusCode, body, sw.ElapsedMilliseconds, null));
+        }
+        catch (TaskCanceledException)
+        {
+            sw.Stop();
+            return Ok(new TestConnectionResponse(0, null, sw.ElapsedMilliseconds, "Request timed out"));
+        }
+        catch (HttpRequestException ex)
+        {
+            sw.Stop();
+            return Ok(new TestConnectionResponse(0, null, sw.ElapsedMilliseconds, ex.Message));
+        }
     }
 }
